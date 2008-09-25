@@ -102,6 +102,7 @@ class curllib {
 		print "URL: (" . $this->requestType . ") ". $this->baseurl . $urlSuffix . "\n";
 		curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (X11; U; Linux x86_64; de; rv:1.9.0.1) Gecko/2008072820 Firefox/3.0.1");
 		curl_setopt($ch, CURLOPT_HEADER, 0);
+		//FIXME: we don't want to disable CURLOPT_SSL_VERIFYPEER for security reasons!!!
 		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER,1 );
 		curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);

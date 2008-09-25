@@ -24,7 +24,7 @@
 
 //header("Content-type: text/xml");
 print '<?xml version="1.0" encoding="utf-8"?>';
-require_once("/home/hp/workspace/telefonrechnung/db_manager.php");
+require_once("../db_manager.php");
 
 define(CR,"\n");
 
@@ -34,7 +34,7 @@ define(CR,"\n");
      "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
 <head>
-	<title>Telefon report</title>
+	<title>Yaphobia <?php print YAPHOBIA_VERSION; ?></title>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 	<link rel="stylesheet" type="text/css" href="standard.css" />
 	
@@ -66,6 +66,7 @@ $category_menu = array(
 
 $cat = $_REQUEST["category"];
 
+print "<h1>Yaphobia (version ".YAPHOBIA_VERSION.")</h1>";
 print '<p class="category_menu">';
 foreach ($category_menu as $id=>$desc){
 	$class= ($id == $cat)? ' class="active"' : '';

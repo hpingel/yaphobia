@@ -48,9 +48,9 @@ class gatherCallData{
 		$this->path = YAPHOBIA_WORK_DIR;
 		
 		print "==================================================\n";
-		print "= Welcome to Yaphobia!                           =\n";
-		print "= Yet another phone bill application...          =\n";
-		print "= You are using Yaphobia version 0.0.1           =\n";
+		print " Welcome to Yaphobia!\n";
+		print " Yet another phone bill application...\n";
+		print " You are using Yaphobia version ".YAPHOBIA_VERSION."\n";
 		print "==================================================\n";
 		
 		$this->getFritzBoxCallerList();

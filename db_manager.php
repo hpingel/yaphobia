@@ -22,6 +22,7 @@
 *
 */
 
+define ('YAPHOBIA_VERSION', '0.0.1-dev');
 require_once('settings.php');
 
 class dbMan {
