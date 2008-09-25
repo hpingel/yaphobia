@@ -1,0 +1,96 @@
+@CHARSET "UTF-8";
+/***************************************************************
+*  Copyright notice
+*
+*  (c) 2008 Henning Pingel
+*  All rights reserved
+*
+*  This script is part of the Yaphobia project. Yaphobia is
+*  free software; you can redistribute it and/or modify
+*  it under the terms of the GNU General Public License as published by
+*  the Free Software Foundation; either version 2 of the License, or
+*  (at your option) any later version.
+*
+*  The GNU General Public License can be found at
+*  http://www.gnu.org/copyleft/gpl.html.
+*  A copy is found in the textfile GPL.txt.
+*
+*  This script is distributed in the hope that it will be useful,
+*  but WITHOUT ANY WARRANTY; without even the implied warranty of
+*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*  GNU General Public License for more details.
+*
+*/
+
+		body{
+			font-family: Arial, sans-serif;
+			font-size: 12px;
+		}
+		
+		table{
+			border-collapse: collapse;
+			margin-left: auto;
+			margin-right: auto;
+			text-align: left;
+		}
+		
+		td, th{
+			border: 1px solid grey;
+			padding: 3px;
+		}
+		
+		th{
+			font-size: 10px;
+		}
+		
+		th{
+			background-color: lightgrey;
+		}
+		
+		tr.sum-row{
+			font-weight: bold;
+		}
+		
+		td.right {
+			text-align: right;
+		}
+		
+		td.error{
+			background-color: pink;
+		}
+		td.correct{
+			background-color: lightgreen;
+		}
+		
+		p.category_menu a{
+			font-size: 14px;
+			text-decoration: none;
+			background-color: black;
+			padding: 2px;
+			color: lightgrey;
+			font-weight: bold;
+		}
+
+		p.category_menu a:hover{
+			background-color: grey;
+			color: white;
+		}
+
+		p.category_menu a.active{
+			background-color: darkred;
+			color: white;
+		}
+
+		div.date_nav{	
+			text-align: center;
+		}
+
+		a.date_nav,
+		span.date_nav_active{
+			font-size: 14px;
+			text-decoration: none;
+		}
+
+		div.content_wrap{
+			text-align: center;
+		}
