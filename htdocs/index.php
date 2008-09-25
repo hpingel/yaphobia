@@ -66,13 +66,13 @@ $category_menu = array(
 
 $cat = $_REQUEST["category"];
 
-print "<h1>Yaphobia (version ".YAPHOBIA_VERSION.")</h1>";
+print '<div class="yaph_header"><h1>Yaphobia (version '.YAPHOBIA_VERSION.')</h1>';
 print '<p class="category_menu">';
 foreach ($category_menu as $id=>$desc){
 	$class= ($id == $cat)? ' class="active"' : '';
 	print '<a'.$class.' href="?category='.$id.'">'.$desc.'</a> ';
 }
-print "</p><hr/>";
+print "</p></div><br/>";
 
 actions($cat);
 
@@ -258,13 +258,13 @@ function monthpicker($month, $year, $cat_id){
 	
 	print '<div class="date_nav">';
 	if ($month > 1)
-		print '<a class="date_nav" href="?m='.($month - 1) . '&y='.$year.'&category='.$cat_id.'">&lt; '.$months[$month -2 ].'</a> | ';
-	print '<span class="date_nav_active">'.$months[ $month -1 ].'</span>';
+		print '<a class="date_nav" href="?m='.($month-1 ) . '&y='.$year.'&category='.$cat_id.'">&lt; '.$months[$month -2 ].'</a> | ';
+	print '<span class="date_nav_active">'.$months[ $month -1  ].'</span>';
 	if ($month < 12)
-		print ' | <a class="date_nav" href="?m='.($month + 1) . '&y='.$year.'&category='.$cat_id.'">'.$months[$month ].' &gt;</a> ';
+		print ' | <a class="date_nav" href="?m='.($month +1) . '&y='.$year.'&category='.$cat_id.'">'.$months[intval($month) ].' &gt;</a> ';
 	print '</div>';
 		
-	print '<select name="m">'."\n";
+	print '<br/><select name="m">'."\n";
 	for ($z=0; $z < count($months); $z++){
 		$selected = ($month == ($z + 1)) ? 'selected="selected"' : ""; 
 		print '<option '.$selected.' value="'.($z+1).'">'.$months[$z].'</option>'. "\n";
@@ -275,7 +275,7 @@ function monthpicker($month, $year, $cat_id){
 	<input type="submit" value="OK"/>';
 	
 		
-	print '</form>';
+	print '</form><br/>';
 }
 
 class report{
@@ -414,6 +414,9 @@ function getTableContent($table_headers, $result, $sum_row_content){
 
 ?>
 	</div>
+
+<hr />
+<p><b>Yaphobia <?php print YAPHOBIA_VERSION;?></b> - Yet Another Phone Bill Application - Licensed under GPL - Get it for free and contribute at <a href="https://sourceforge.net/projects/yaphobia/">https://sourceforge.net/projects/yaphobia/</a>!</p>
 
 	</body>
 

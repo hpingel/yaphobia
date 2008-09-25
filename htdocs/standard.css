@@ -22,6 +22,12 @@
 *
 */
 
+		div.yaph_header{
+			background-color: lightgrey;
+			border: 1px dotted blue;
+			padding: 5px;
+		}
+		
 		body{
 			font-family: Arial, sans-serif;
 			font-size: 12px;
@@ -69,6 +75,7 @@
 			padding: 2px;
 			color: lightgrey;
 			font-weight: bold;
+			margin-bottom: 5px;
 		}
 
 		p.category_menu a:hover{
@@ -84,6 +91,8 @@
 		div.date_nav{	
 			text-align: center;
 		}
+
+
 
 		a.date_nav,
 		span.date_nav_active{
