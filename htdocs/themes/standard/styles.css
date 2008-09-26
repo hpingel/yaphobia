@@ -103,3 +103,13 @@
 		div.content_wrap{
 			text-align: center;
 		}
+		
+		pre{
+			font-size: 10px;
+			border: 1px solid black;
+			width: 80%;
+			overflow: auto;
+			margin-right: auto;
+			margin-left: auto;
+			text-align: left;
+		}

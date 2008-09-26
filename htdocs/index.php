@@ -22,9 +22,10 @@
 *
 */
 
-require_once("../classes/class.db_manager.php");
+require_once( "../classes/class.db_manager.php");
+require_once( "../classes/class.callImportManager.php");
 
-//header("Content-type: text/xml");
+//header("Content-type: text/xml"); //disabled until we solved some problems
 print '<?xml version="1.0" encoding="utf-8"?>';
 
 define(CR,"\n");
@@ -37,7 +38,7 @@ define(CR,"\n");
 <head>
 	<title>Yaphobia <?php print YAPHOBIA_VERSION; ?></title>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-	<link rel="stylesheet" type="text/css" href="standard.css" />
+	<link rel="stylesheet" type="text/css" href="themes/standard/styles.css" />
 	
 </head>
 	<body>
@@ -46,26 +47,17 @@ define(CR,"\n");
 
 <?php
 
-/*
-
-show people that we like (we call them and like to talk for long)
-SELECT identity, phonenumber, sum(estimated_duration) as total_duration, sum(billed_cost) as total_costs  FROM callprotocol where calltype = 3  group by phonenumber order by total_duration DESC
-
-show most expensive communication partners that we have called (sorted by total costs)
-SELECT identity, phonenumber, sum(estimated_duration) as total_duration, sum(billed_cost) as total_costs  FROM callprotocol  where billed_cost > 0 group by phonenumber order by total_costs DESC
-
-*/
-
 $category_menu = array(
 	1 => 'Monatsrechnungen',
 	2 => 'Tarifcheck',
 	3 => 'Buchungscheck',
 	4 => 'Jahres&uuml;berblick',
-	5 => 'Weitere Statistiken'
+	5 => 'Weitere Statistiken',
+	6 => 'Datenimport'
 	);
 
 
-$cat = $_REQUEST["category"];
+$cat = isset($_REQUEST["category"]) ? intval($_REQUEST["category"]) : 0;
 
 print '<div class="yaph_header"><h1>Yaphobia</h1>';
 print '<p class="category_menu">';
@@ -97,8 +89,8 @@ function actions($category){
 	$year = '2008';
 	
 	if ($category == 1){
-		$month = $_REQUEST["m"];
-		$year = $_REQUEST["y"];
+		$month = intval($_REQUEST["m"]);
+		$year = intval($_REQUEST["y"]);
 		$a = new report();
 		$a->getMonthlyReport($month,$year, false);
 	}
@@ -213,8 +205,8 @@ function actions($category){
 			'Summe Gespraechsdauer'
 			);
 		print "<h1>Incoming calls length: Show people that like to talk to us (sorted by total call length)</h1>";
-		print getTableContent($table_headers, $result, "");
-
+		print getTableContent($table_headers, $result, "");	
+		
 		$query="SELECT cpt.identity, cpt.phonenumber, $totalduration, $totalcosts ".
 			"FROM callprotocol cpt ".
 			"GROUP BY cpt.phonenumber ".
@@ -247,8 +239,41 @@ function actions($category){
 		
 		$db = null;
 	}
-	
-	
+	elseif ($category == 6){
+		
+		$importType = isset($_REQUEST['import_type']) ? intval($_REQUEST['import_type']) : 0;
+		if ( $importType == 0){
+			print '<h2><a href="?category=6&import_type=1">Anrufliste aus Fritzbox importieren</a></h2>';
+			if (SIPGATE_ACTIVE)
+				print '<h2><a href="?category=6&import_type=2">EVN des aktuellen Monats von sipgate importieren</a></h2>';
+			if (DUSNET_ACTIVE)
+				print '<h2><a href="?category=6&import_type=3">EVN des aktuellen Monats von dus.net importieren</a></h2>';
+		}
+		elseif ( $importType == 1){
+			print '<h2>Anrufliste aus Fritzbox importieren</h2>';
+			print "<pre>";
+			$call_import = new callImportManager();
+			$call_import->getFritzBoxCallerList();
+			print "</pre>";
+		}
+		elseif ( $importType == 2 && SIPGATE_ACTIVE){
+			print '<h2>EVN des aktuellen Monats von sipgate runterladen</h2>';
+			print "<pre>";
+			$call_import = new callImportManager();
+			$sg_callist = $call_import->getSipgateCallsOfCurrentMonth( SIPGATE_USERNAME, SIPGATE_PASSWORD);
+			$call_import->putSipgateCallArrayIntoDB($sg_callist, SIPGATE_PROVIDER_ID);
+			print "</pre>";
+			
+		}
+		elseif ( $importType == 3 && DUSNET_ACTIVE){
+			print '<h2>EVN des aktuellen Monats von dus.net runterladen</h2>';
+			print "<pre>";
+			$call_import = new callImportManager();
+			$call_import->getDusNetCalls( DUSNET_PROVIDER_ID, DUSNET_SIPACCOUNT, DUSNET_USERNAME, DUSNET_PASSWORD );
+			print "</pre>";
+			
+		}
+	}
 }
 
 function monthpicker($month, $year, $cat_id){

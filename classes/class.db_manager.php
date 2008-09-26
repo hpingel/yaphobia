@@ -28,21 +28,34 @@ class dbMan {
 	
 	var $db;
 	
+	/*
+	 * constructor, connect to database
+	 * 
+	 */
 	function __construct(){
 		$this->db = mysql_connect( YAPHOBIA_DB_HOST, YAPHOBIA_DB_USER, YAPHOBIA_DB_PASSWORD );
 		mysql_select_db  ( YAPHOBIA_DB_NAME , $this->db );
 	}
 
+	/*
+	 * send query to MySQL server, returns result
+	 */
 	public function sendQuery( $query ){	
 			$result = mysql_query( $query, $this->db );
 			return $result;
 	}
 
+	/*
+	 * returns avtive db handle 
+	 */
 	public function getDBHandle( ){	
 			return $this->db;
 	}
 	
-	
+	/*
+	 * tries to insert a call from a call protocol (for example from Fritz!Box) to the database
+	 * if the call already is in the database table, it will not be added another time
+	 */
 	function insertMonitoredCall( $values ){
 		
 		$query = "INSERT INTO callprotocol (date, identity, phonenumber, calltype, usedphone, providerstring, provider_id, estimated_duration)".
@@ -62,9 +75,19 @@ class dbMan {
 		}
 	}
 	
+	/*
+	 * check if we can find a matching call from the call protocol for a call from a phone bill
+	 * if this is possible (single call is found) we update the call protocol entry with the 
+	 * billing information 
+	 */
 	function checkCallUniqueness($x){
 		$tolerance_span_call_begin = TOLERANCE_CALL_BEGIN; //in seconds
 		$tolerance_span_duration = TOLERANCE_CALL_DURATION; //in seconds
+		
+		//security: prevent the possiblity of sql injections
+		foreach ($x as $key=>$value){
+			$x[$key] = mysql_real_escape_string( $value);
+		}
 		
 		$update= 
 			"billed = '1', ".
@@ -111,6 +134,9 @@ class dbMan {
 		}
 	}
 	
+	/*
+	 * closes mysql connection
+	 */
 	function __destruct(){
 		mysql_close($this->db);
 	}
