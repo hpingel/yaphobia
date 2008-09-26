@@ -22,9 +22,10 @@
 *
 */
 
+require_once("../classes/class.db_manager.php");
+
 //header("Content-type: text/xml");
 print '<?xml version="1.0" encoding="utf-8"?>';
-require_once("../db_manager.php");
 
 define(CR,"\n");
 
@@ -66,13 +67,24 @@ $category_menu = array(
 
 $cat = $_REQUEST["category"];
 
-print '<div class="yaph_header"><h1>Yaphobia (version '.YAPHOBIA_VERSION.')</h1>';
+print '<div class="yaph_header"><h1>Yaphobia</h1>';
 print '<p class="category_menu">';
 foreach ($category_menu as $id=>$desc){
 	$class= ($id == $cat)? ' class="active"' : '';
 	print '<a'.$class.' href="?category='.$id.'">'.$desc.'</a> ';
 }
 print "</p></div><br/>";
+
+//check for settings file
+
+define( 'PATH_TO_SETTINGS', str_replace("/htdocs","",dirname(__FILE__)) . '/config/settings.php' ); 
+if (file_exists(PATH_TO_SETTINGS)){
+	require_once(PATH_TO_SETTINGS);	
+}
+else{
+	die('<p>ERROR: There is no configuration file <b>settings.php</b>!<br/>Please copy <b>settings.defaults.php</b> to <b>settings.php</b> and change the options within the file according to your needs.</p>');
+}
+
 
 actions($cat);
 
@@ -413,10 +425,11 @@ function getTableContent($table_headers, $result, $sum_row_content){
 
 
 ?>
-	</div>
-
 <hr />
 <p><b>Yaphobia <?php print YAPHOBIA_VERSION;?></b> - Yet Another Phone Bill Application - Licensed under GPL - Get it for free and contribute at <a href="https://sourceforge.net/projects/yaphobia/">https://sourceforge.net/projects/yaphobia/</a>!</p>
+
+	</div>
+
 
 	</body>
 

@@ -23,7 +23,6 @@
 */
 
 define ('YAPHOBIA_VERSION', '0.0.1-dev');
-require_once('settings.php');
 
 class dbMan {
 	
@@ -48,7 +47,7 @@ class dbMan {
 		
 		$query = "INSERT INTO callprotocol (date, identity, phonenumber, calltype, usedphone, providerstring, provider_id, estimated_duration)".
 		$query .= " VALUES (" . $values . ")";
-		print "Sending: $query\n";
+		print "Checking presence of call: $values\n";
 		
 		$result = mysql_query($query,$this->db);
 		if (!$result) {

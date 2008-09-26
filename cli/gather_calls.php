@@ -23,12 +23,21 @@
 */
 
 
-require_once("settings.php");
-require_once("curllib.php");
-require_once("db_manager.php");
-require_once("billing_provider/dusnet.php");
-require_once("billing_provider/sipgate.php");
-require_once("protocol_provider/fritzbox.php");
+//check for settings file
+
+define( 'PATH_TO_SETTINGS', str_replace("/cli","",dirname(__FILE__)) . '/config/settings.php' ); 
+if (file_exists(PATH_TO_SETTINGS)){
+	require_once(PATH_TO_SETTINGS);	
+}
+else{
+	die('<p>ERROR: There is no configuration file <b>settings.php</b>!<br/>Please copy <b>settings.defaults.php</b> to <b>settings.php</b> and change the options within the file according to your needs.</p>');
+}
+
+require_once("../classes/class.curllib.php");
+require_once("../classes/class.db_manager.php");
+require_once("../billing_provider/dusnet.php");
+require_once("../billing_provider/sipgate.php");
+require_once("../protocol_provider/fritzbox.php");
 
 $telrechnung = new gatherCallData();
 
@@ -55,16 +64,16 @@ class gatherCallData{
 		
 		$this->getFritzBoxCallerList();
 		
-		if (DUSNET_ACTIVE) 
-			$this->getDusNetCalls( DUSNET_PROVIDER_ID, DUSNET_SIPACCOUNT, DUSNET_USERNAME, DUSNET_PASSWORD );
-		if (DUSNET_ACTIVE) 
-			$this->getSipgateCalls(SIPGATE_PROVIDER_ID, SIPGATE_USERNAME, SIPGATE_PASSWORD);
-		
-		//searches through database to see if there are new call rates to add to the list
-		$this->checkForNewRateTypes();
-		
 		if (AUTOBILL_REMAINING_FLATRATE_CALLS)
 			$this->markFlateRateCallsAsBilled('0', 'Flatrate Festnetz');
+		
+		if (DUSNET_ACTIVE) 
+			$this->getDusNetCalls( DUSNET_PROVIDER_ID, DUSNET_SIPACCOUNT, DUSNET_USERNAME, DUSNET_PASSWORD );
+		if (SIPGATE_ACTIVE) 
+			$this->getSipgateCalls(SIPGATE_PROVIDER_ID, SIPGATE_USERNAME, SIPGATE_PASSWORD);
+
+		//searches through database to see if there are new call rates to add to the list
+		$this->checkForNewRateTypes();
 			
 		print "==================================================\n";
 		print "= End of script                                  =\n";
@@ -239,7 +248,7 @@ class gatherCallData{
     		print 'Invalid query: ' . mysql_errno() . ") ". mysql_error() . "\n";
 		}
 		else{
-			print "A number of flatrate calls have been auto-billed.\n";
+			print "Unbilled flatrate calls have been auto-billed.\n";
 		}
 	}
 	

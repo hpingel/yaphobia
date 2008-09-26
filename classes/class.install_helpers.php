@@ -22,11 +22,6 @@
 *
 */
 
-require_once("settings.php");
-require_once("db_manager.php");
-
-$cdbt = new createDBTables();
-
 class createDBTables{
 
 	var $db,
@@ -50,6 +45,8 @@ class createDBTables{
 			ENGINE = InnoDB;
 		";
 		$result = mysql_query( $query, $this->dbh );
+		
+		print "MySQL response: ". mysql_errno() . " " . mysql_error(). "\n";
 
 		//fillDummyDatesTable
 		for ($z=0; $z < 366; $z++){
@@ -77,6 +74,8 @@ class createDBTables{
 			) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='fritzbox call monitor data'
 		";
 		$result = mysql_query( $query, $this->dbh );
+
+		print "MySQL response: ". mysql_errno() . " " . mysql_error(). "\n";
 		
 		$query="		
 			CREATE TABLE  `provider_details` (
@@ -88,6 +87,9 @@ class createDBTables{
 		";
 		$result = mysql_query( $query, $this->dbh );
 		
+		print "MySQL response: ". mysql_errno() . " " . mysql_error(). "\n";
+		
+		
 		$query="		
 			CREATE TABLE `provider_rate_types` (
 			  `provider_id` tinyint(4) NOT NULL,
@@ -98,11 +100,11 @@ class createDBTables{
 			  PRIMARY KEY  USING BTREE (`provider_id`,`rate_type`,`valid_from`,`valid_to`)
 			) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Lists rates to different locations including price'		";
 		$result = mysql_query( $query, $this->dbh );
+		print "MySQL response: ". mysql_errno() . " " . mysql_error(). "\n";
 		
 	}
 	
 }
-
 
 
 ?>
