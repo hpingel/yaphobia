@@ -33,7 +33,7 @@ class dusnetRemote {
 	function __construct(){	
 		$this->dusnet_remote = new curllib();
 		$this->dusnet_remote->setBaseUrl("https://my.dus.net/");
-		$this->dusnet_remote->enableCookieJar( YAPHOBIA_WORK_DIR . '/cookiejar_dusnet.txt' );
+		$this->dusnet_remote->enableCookieJar( YAPHOBIA_COOKIEJAR_DIR . 'cookiejar_dusnet.txt' );
 		$this->parsed_array = array();
 	}
 	

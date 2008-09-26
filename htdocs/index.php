@@ -240,6 +240,9 @@ function actions($category){
 		$db = null;
 	}
 	elseif ($category == 6){
+
+		$db = new dbMan();
+		$call_import = new callImportManager($db);
 		
 		$importType = isset($_REQUEST['import_type']) ? intval($_REQUEST['import_type']) : 0;
 		if ( $importType == 0){
@@ -249,17 +252,18 @@ function actions($category){
 			if (DUSNET_ACTIVE)
 				print '<h2><a href="?category=6&import_type=3">EVN des aktuellen Monats von dus.net importieren</a></h2>';
 		}
-		elseif ( $importType == 1){
+		else{
+		}
+		
+		if ( $importType == 1){
 			print '<h2>Anrufliste aus Fritzbox importieren</h2>';
 			print "<pre>";
-			$call_import = new callImportManager();
 			$call_import->getFritzBoxCallerList();
 			print "</pre>";
 		}
 		elseif ( $importType == 2 && SIPGATE_ACTIVE){
 			print '<h2>EVN des aktuellen Monats von sipgate runterladen</h2>';
 			print "<pre>";
-			$call_import = new callImportManager();
 			$sg_callist = $call_import->getSipgateCallsOfCurrentMonth( SIPGATE_USERNAME, SIPGATE_PASSWORD);
 			$call_import->putSipgateCallArrayIntoDB($sg_callist, SIPGATE_PROVIDER_ID);
 			print "</pre>";
@@ -268,7 +272,6 @@ function actions($category){
 		elseif ( $importType == 3 && DUSNET_ACTIVE){
 			print '<h2>EVN des aktuellen Monats von dus.net runterladen</h2>';
 			print "<pre>";
-			$call_import = new callImportManager();
 			$call_import->getDusNetCalls( DUSNET_PROVIDER_ID, DUSNET_SIPACCOUNT, DUSNET_USERNAME, DUSNET_PASSWORD );
 			print "</pre>";
 			

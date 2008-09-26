@@ -39,7 +39,7 @@ class sipgateRemote {
 		$this->callerString = "";	
 		$this->sg_remote = new curllib();
 		$this->sg_remote->setBaseUrl("https://secure.sipgate.de/user/");
-		$this->sg_remote->enableCookieJar( '/home/hp/Dokumente/backups/telefonrechnung/cookiejar_sipgate.txt' );
+		$this->sg_remote->enableCookieJar( YAPHOBIA_COOKIEJAR_DIR . 'cookiejar_sipgate.txt' );
 		
 	}
 	

@@ -36,6 +36,7 @@ else{
 	die('<p>ERROR: There is no configuration file <b>settings.php</b>!<br/>Please copy <b>settings.defaults.php</b> to <b>settings.php</b> and change the options within the file according to your needs.</p>');
 }
 
+require_once( PATH_TO_YAPHOBIA. "/classes/class.db_manager.php");
 require_once( PATH_TO_YAPHOBIA. "/classes/class.callImportManager.php");
 
 print "==================================================\n";
@@ -48,8 +49,8 @@ print " call data is imported into Yaphobia's database\n";
 print " automatically.\n";
 print "==================================================\n";
 
-
-$call_import = new callImportManager();
+$db = new dbMan();
+$call_import = new callImportManager($db);
 $call_import->getFritzBoxCallerList();
 
 if (AUTOBILL_REMAINING_FLATRATE_CALLS)

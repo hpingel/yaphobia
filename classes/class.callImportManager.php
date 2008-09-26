@@ -22,13 +22,12 @@
 *
 */
 
-define( 'PATH_TO_YAPHOBIA', str_replace("/classes","",dirname(__FILE__)) ); 
+define( 'PATH_TO_YAPHOBIA_CIM', str_replace("/classes","",dirname(__FILE__)) ); 
 
-require_once( PATH_TO_YAPHOBIA. "/classes/class.curllib.php");
-require_once( PATH_TO_YAPHOBIA. "/classes/class.db_manager.php");
-require_once( PATH_TO_YAPHOBIA. "/billing_provider/dusnet.php");
-require_once( PATH_TO_YAPHOBIA. "/billing_provider/sipgate.php");
-require_once( PATH_TO_YAPHOBIA. "/protocol_provider/fritzbox.php");
+require_once( PATH_TO_YAPHOBIA_CIM. "/classes/class.curllib.php");
+require_once( PATH_TO_YAPHOBIA_CIM. "/billing_provider/dusnet.php");
+require_once( PATH_TO_YAPHOBIA_CIM. "/billing_provider/sipgate.php");
+require_once( PATH_TO_YAPHOBIA_CIM. "/protocol_provider/fritzbox.php");
 
 class callImportManager{
 	
@@ -39,9 +38,9 @@ class callImportManager{
 	/*
 	 * constructor
 	 */
-	function __construct(){
+	function __construct($db){
 		
-		$this->db = new dbMan();
+		$this->db = $db;
 		$this->dbh = $this->db->getDBHandle();
 		$this->path = YAPHOBIA_WORK_DIR;	
 	}

@@ -29,11 +29,15 @@
  * 
  */
 
+
 	define( 'YAPHOBIA_DB_NAME', 'mysql_database_name');
 	define( 'YAPHOBIA_DB_USER', 'mysql_user_name');
 	define( 'YAPHOBIA_DB_PASSWORD', 'mysql_user_password');
-	define( 'YAPHOBIA_DB_HOST', 'lovalhost');
+	define( 'YAPHOBIA_DB_HOST', 'localhost');
 	define( 'YAPHOBIA_WORK_DIR', "/home/your_user/Dokumente/telefonrechnung");
+	define( 'PATH_TO_YAPHOBIA', str_replace("/config","",dirname(__FILE__))  );	
+	//cookiejar dir must be writable from web root
+	define( 'YAPHOBIA_COOKIEJAR_DIR', PATH_TO_YAPHOBIA. '/cookiejar/' ); //ends with a slash
 	
 	define( 'FRITZBOX_PASSWORD', 'your_individual_password');
 	

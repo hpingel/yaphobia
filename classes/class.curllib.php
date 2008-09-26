@@ -42,11 +42,24 @@ class curllib {
 		$this->binaryTransfer = false;
 	}
 	
+	function __destruct (){
+		if ( $this->cookieJarEnabled ){
+			$this->deleteCookieJarFile();
+		}
+	}
+	
 	public function enableCookieJar ( $path){
 		$this->cookieJarEnabled = true;
 		$this->cookieJarPath = $path;
+		//FIXME: For security reasons, we should have a salt in the cookie jar filename!!!
 	}
 
+	private function deleteCookieJarFile (){
+		if ( file_exists($this->cookieJarPath)){
+			@unlink($this->cookieJarPath);
+		}
+	}
+	
 	public function enableBinaryTransfer (){
 		$this->binaryTransfer = true;
 	}
@@ -115,16 +128,27 @@ class curllib {
 			print "Post mode is turned on.\n";
 			//curl_setopt($ch, CURLOPT_POST, TRUE);		
 			curl_setopt($ch, CURLOPT_POSTFIELDS, $this->postValues);
+			//print "Postvars: " . $this->postValues. "\n";
 		}
 		
 		if ( $this->cookieJarEnabled ){
 			if (!$this->cookieJarInitialized){
-				print "Cookie jar is turned on and was initialized.\n";
+				if (file_exists($this->cookieJarPath)){
+					$this->deleteCookieJarFile();
+					print "Error: Old cookiejar file was still there at $this->cookieJarPath\n";
+				}
+				print "Cookie jar is turned on and was initialized ($this->cookieJarPath).\n";
 				curl_setopt($ch, CURLOPT_COOKIEJAR, $this->cookieJarPath );
 				$this->cookieJarInitialized = true;
 			}
 			else{
-				print "Existing cookie jar is used.\n";
+				if (!file_exists($this->cookieJarPath)){
+					print "Error: Cookiejar file doesn't exist at $this->cookieJarPath\n";
+				}
+				else{
+					print "Existing cookie jar is used.\n";
+					
+				}
 				curl_setopt($ch, CURLOPT_COOKIEFILE, $this->cookieJarPath );
 			}
 			
@@ -136,6 +160,7 @@ class curllib {
 		print "\n";
 		
 		curl_close($ch);
+		
 		return $my_response;
 	}
 	
