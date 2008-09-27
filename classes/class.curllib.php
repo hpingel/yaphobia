@@ -40,6 +40,10 @@ class curllib {
 		$this->cookieJarPath = "";
 		$this->cookieJarInitialized = false;
 		$this->binaryTransfer = false;
+		
+		if (!function_exists( "curl_init")){
+			print "\nERROR: Please enable the PHP Extension curl in php.ini file.";
+		}
 	}
 	
 	function __destruct (){

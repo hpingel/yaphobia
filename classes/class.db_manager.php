@@ -33,8 +33,14 @@ class dbMan {
 	 * 
 	 */
 	function __construct(){
-		$this->db = mysql_connect( YAPHOBIA_DB_HOST, YAPHOBIA_DB_USER, YAPHOBIA_DB_PASSWORD );
+		$this->db = @mysql_connect( YAPHOBIA_DB_HOST, YAPHOBIA_DB_USER, YAPHOBIA_DB_PASSWORD );
+		if (mysql_errno() != 0){
+			die('<div class="welcome"><h2>Problem with database settings.</h2>Error on database connection attempt: <b>'. mysql_error().'</b>. Please check your database parameters in config/settings.php.</div>');
+		}
 		mysql_select_db  ( YAPHOBIA_DB_NAME , $this->db );
+		if (mysql_errno() != 0){
+			die('<div class="welcome"><h2>Problem with database settings.</h2>Error on database selection attempt: <b>'. mysql_error().'</b>. Please check your database parameters in config/settings.php.</div>');
+		}
 	}
 
 	/*
@@ -138,7 +144,7 @@ class dbMan {
 	 * closes mysql connection
 	 */
 	function __destruct(){
-		mysql_close($this->db);
+		@mysql_close($this->db);
 	}
 }
 

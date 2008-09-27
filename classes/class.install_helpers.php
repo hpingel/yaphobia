@@ -24,13 +24,11 @@
 
 class createDBTables{
 
-	var $db,
-		$dbh;
+	var $dbh;
 	
 	
-	function __construct(){
-		$this->db = new dbMan();
-		$this->dbh = $this->db->getDBHandle();
+	function __construct($dbh){
+		$this->dbh = $dbh;
 		$this->createAllTables();
 	}
 	

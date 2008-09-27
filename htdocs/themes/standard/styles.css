@@ -103,7 +103,17 @@
 		div.content_wrap{
 			text-align: center;
 		}
-		
+
+		div.welcome{
+			background-color: lightyellow;
+			border: 5px dotted orange;
+			width: 50%;
+			color: brown;
+			margin-right: auto;
+			margin-left: auto;
+			padding: 10px;
+		}
+
 		pre{
 			font-size: 10px;
 			border: 1px solid black;
