@@ -37,7 +37,7 @@ class fritzBoxRemote {
 		$this->callerList = array();	
 		$this->callerString = "";	
 		$this->fb_remote = new curllib();
-		$this->fb_remote->setBaseUrl("http://fritz.box/");
+		$this->fb_remote->setBaseUrl("http://".FRITZBOX_HOSTNAME."/");
 		//$this->fb_remote->enableCookieJar( YAPHOBIA_COOKIEJAR_DIR . 'cookiejar_fritzbox.txt' );		
 	}
 

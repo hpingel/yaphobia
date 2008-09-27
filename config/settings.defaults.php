@@ -39,6 +39,7 @@
 	//cookiejar dir must be writable from web root
 	define( 'YAPHOBIA_COOKIEJAR_DIR', PATH_TO_YAPHOBIA. '/cookiejar/' ); //ends with a slash
 	
+	define( 'FRITZBOX_HOSTNAME', 'fritz.box');
 	define( 'FRITZBOX_PASSWORD', 'your_individual_password');
 	
 	/*

@@ -24,8 +24,8 @@
 
 
 
-define( 'PATH_TO_YAPHOBIA', str_replace("/cli","",dirname(__FILE__)) ); 
-define( 'PATH_TO_SETTINGS', PATH_TO_YAPHOBIA . '/config/settings.php' );
+define( 'PATH_TO_YAPHOBIA', str_replace("cli","",dirname(__FILE__)) ); 
+define( 'PATH_TO_SETTINGS', PATH_TO_YAPHOBIA . 'config/settings.php' );
 
 //check for settings file
 
@@ -36,8 +36,8 @@ else{
 	die('<p>ERROR: There is no configuration file <b>settings.php</b>!<br/>Please copy <b>settings.defaults.php</b> to <b>settings.php</b> and change the options within the file according to your needs.</p>');
 }
 
-require_once( PATH_TO_YAPHOBIA. "/classes/class.db_manager.php");
-require_once( PATH_TO_YAPHOBIA. "/classes/class.callImportManager.php");
+require_once( PATH_TO_YAPHOBIA. "classes/class.db_manager.php");
+require_once( PATH_TO_YAPHOBIA. "classes/class.callImportManager.php");
 
 print "==================================================\n";
 print " Welcome to Yaphobia!\n";

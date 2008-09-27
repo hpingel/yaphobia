@@ -24,8 +24,8 @@
 
 //check for settings file
 
-define( 'PATH_TO_YAPHOBIA', str_replace("/cli","",dirname(__FILE__)) ); 
-define( 'PATH_TO_SETTINGS', PATH_TO_YAPHOBIA . '/config/settings.php' );
+define( 'PATH_TO_YAPHOBIA', str_replace("cli","",dirname(__FILE__)) ); 
+define( 'PATH_TO_SETTINGS', PATH_TO_YAPHOBIA . 'config/settings.php' );
 
 if (file_exists(PATH_TO_SETTINGS)){
 	require_once(PATH_TO_SETTINGS);	
@@ -34,8 +34,8 @@ else{
 	die('<p>ERROR: There is no configuration file <b>settings.php</b>!<br/>Please copy <b>settings.defaults.php</b> to <b>settings.php</b> and change the options within the file according to your needs.</p>');
 }
 
-require_once( PATH_TO_YAPHOBIA. "/classes/class.db_manager.php");
-require_once( PATH_TO_YAPHOBIA. "/classes/class.install_helpers.php");
+require_once( PATH_TO_YAPHOBIA. "classes/class.db_manager.php");
+require_once( PATH_TO_YAPHOBIA. "classes/class.install_helpers.php");
 
 $cdbt = new createDBTables();
 
