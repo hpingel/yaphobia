@@ -35,19 +35,21 @@ class callImportManager{
 		$dbh,
 		$path,
 		$dusnet_trace,
-		$sipgate_trace;
-
+		$sipgate_trace,
+		$currentMonth,
+		$currentYear;
+		
 	/*
 	 * constructor
 	 */
 	function __construct($db){
-		
 		$this->db = $db;
 		$this->dbh = $this->db->getDBHandle();
 		$this->path = YAPHOBIA_DATA_EXPORT_DIR;
 		$this->dusnet_trace = "";
 		$this->sipgate_trace = "";
-		
+		$this->currentMonth = date('m', time());
+		$this->currentYear = date('Y', time());
 	}
 
 	/*
@@ -55,8 +57,7 @@ class callImportManager{
 	 * and saves it there
 	 */
 	public function createFileInExportDir( $filename, $content){
-		if (is_writeable($filename)){
-			file_put_contents($this->path."sipgate_csv_verbindungen_".$month.".csv", $csvdata);
+		if (@file_put_contents($filename, $content) !== false){
 			return "File '$filename' has been successfully written.\n";
 		}
 		else{
@@ -80,7 +81,11 @@ class callImportManager{
 		
 		//save data as a csv file for backup or testing purposes
 		if (DUSNET_SAVE_CSV_DATA_TO_WORKDIR){
-			$trace .= $this->createFileInExportDir( $this->path."dusnet_csv_verbindungen.csv", $dusnetCon->getCsvData());
+			$trace .= 
+				$this->createFileInExportDir( 
+					$this->path."dusnet_connections_csv_".$this->currentYear."-".$this->currentMonth.".csv", 
+					$dusnetCon->getCsvData()
+				);
 		}
 		
 		//put calls into db if they are not in there
@@ -109,12 +114,10 @@ class callImportManager{
 		$trace = "";
 		$sg = new sipgateRemote();
 		$sg->logon($username, $password);
-		$month = date('m', time());
-		$year = date('Y', time());
-		$csvdata = $sg->getEvnOfMonth( $year ."-". $month );
+		$csvdata = $sg->getEvnOfMonth( $this->currentYear ."-". $this->currentMonth );
 		$sg->logout();
 		if (SIPGATE_SAVE_CSV_DATA_TO_WORKDIR){
-			$trace .= $this->createFileInExportDir( $this->path."sipgate_csv_verbindungen_".$month.".csv", $csvdata);
+			$trace .= $this->createFileInExportDir( $this->path."sipgate_csv_verbindungen_".$this->currentYear."-".$this->currentMonth.".csv", $csvdata);
 		}
 		
 		$this->sipgate_trace .= $sg->getTraceString() . $trace  ."\n";
