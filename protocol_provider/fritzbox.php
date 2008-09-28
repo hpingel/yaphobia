@@ -28,27 +28,27 @@
  * 
  */
 
-class fritzBoxRemote {
+class fritzBoxRemote extends curllib {
 	
 	var $callerList;
 	var $callerString;
 	
 	function __construct(){
+		parent::__construct();
 		$this->callerList = array();	
 		$this->callerString = "";	
-		$this->fb_remote = new curllib();
-		$this->fb_remote->setBaseUrl("http://".FRITZBOX_HOSTNAME."/");
-		//$this->fb_remote->enableCookieJar( YAPHOBIA_COOKIEJAR_DIR . 'cookiejar_fritzbox.txt' );		
+		$this->setBaseUrl("http://".FRITZBOX_HOSTNAME."/");
+		//$this->enableCookieJar( YAPHOBIA_COOKIEJAR_DIR . 'cookiejar_fritzbox.txt' );		
 	}
 
 	public function logon($password){
 		$comment = "logon to fritzbox";
-		$response = $this->fb_remote->postRequest(
+		$response = $this->postRequest(
 			$comment, 
 			"getpage=../html/de/menus/menu2.html&errorpage=../html/index.html&var:lang=de&var:pagename=home&var:menu=home&login:command/password=$password", 
 			"/cgi-bin/webcm?getpage=../html/index_inhalt.html"
 		);
-		//print $response;
+		//$this->trace .= $response;
 	}
 
 	public function logout(){
@@ -56,19 +56,19 @@ class fritzBoxRemote {
 		/*
 		 * hmmm... there is no logout button 
 		 *
-		$response = $this->fb_remote->getRequest(
+		$response = $this->getRequest(
 			$comment, 
 			"???"
 		);*/
-	}
-
+	}	
+	
 	public function loadCallerListFromBox(){
 
 		//downloading the caller list without refreshing the caller list before
 		//can lead to a caller list where the latest calls are still missing
 		
 		$comment = "refresh fritzbox caller list";
-		$response = $this->fb_remote->getRequest(
+		$response = $this->getRequest(
 			$comment, 
 			"cgi-bin/webcm?".
 			"getpage=..%2Fhtml%2Fde%2Fmenus%2Fmenu2.html".
@@ -90,17 +90,17 @@ class fritzBoxRemote {
 		);
 			
 		$comment = "load fritzbox caller list";
-		$response = $this->fb_remote->binaryTransfer(
+		$response = $this->binaryTransfer(
 			$comment,
 			"cgi-bin/webcm?getpage=..%2Fhtml%2Fde%2FFRITZ%21Box_Anrufliste.csv" 
 		);
-		//print $response;
+		//$this->trace .= $response;
 		
 		$this->callerString .= $response;
 	}	
 
 	public function loadCallerListsFromDir($dir){
-		print "load fritzbox caller lists from local directory";
+		$this->trace .= "load fritzbox caller lists from local directory";
 		$dircontent = scandir($dir);
 		foreach ($dircontent as $file){
 			if ($file != "." && $file!= ".."){
@@ -128,7 +128,7 @@ class fritzBoxRemote {
 				$this->callerList[] = $details;
 			}
 			else{
-				print "Line '$line' was skipped because it doesn't represent the expected call format.\n";
+				$this->trace .= "Line '$line' was skipped because it doesn't represent the expected call format.\n";
 			}
 		}
 		return $this->callerList;

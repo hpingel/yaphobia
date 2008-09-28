@@ -33,7 +33,9 @@ class callImportManager{
 	
 	var $db,
 		$dbh,
-		$path;
+		$path,
+		$dusnet_trace,
+		$sipgate_trace;
 
 	/*
 	 * constructor
@@ -42,7 +44,10 @@ class callImportManager{
 		
 		$this->db = $db;
 		$this->dbh = $this->db->getDBHandle();
-		$this->path = YAPHOBIA_WORK_DIR;	
+		$this->path = YAPHOBIA_DATA_EXPORT_DIR;
+		$this->dusnet_trace = "";
+		$this->sipgate_trace = "";
+		
 	}
 	
 	/*
@@ -55,10 +60,17 @@ class callImportManager{
 		$dusnetCon->collectCallsOfCurrentMonth($sipAccount);
 		$dusnetCon->logout();
 		$calllist = $dusnetCon->getCallerListArray();
+
+		//save data as a csv file for backup or testing purposes
+		if (DUSNET_SAVE_CSV_DATA_TO_WORKDIR){
+			$csvdata = $dusnetCon->getCsvData();
+			file_put_contents($this->path."/dusnet_csv_verbindungen.csv", $csvdata);
+		}
 		
 		//put calls into db if they are not in there
+		$trace = "";
 		foreach ($calllist as $call){
-			$this->db->checkCallUniqueness( array(
+			$trace .= $this->db->checkCallUniqueness( array(
 				'providerid'      => $providerId,
 				'number'          => $call["Nummer"],
 				'date'            => $call["Datum"],
@@ -68,13 +80,11 @@ class callImportManager{
 			));
 		}
 		
-		//save data as a csv file for backup or testing purposes
-		if (DUSNET_SAVE_CSV_DATA_TO_WORKDIR){
-			$csvdata = $dusnetCon->getCsvData();
-			file_put_contents($this->path."/dusnet_csv_verbindungen.csv", $csvdata);
-		}
-		//$dusnetCon = null;
-		print "end.\n";
+		$this->dusnet_trace = $dusnetCon->getTraceString() . $trace . "\nend.\n";
+	}
+	
+	public function getDusNetTrace(){
+		return $this->dusnet_trace;
 	}
 
 	/*
@@ -88,8 +98,14 @@ class callImportManager{
 		if (SIPGATE_SAVE_CSV_DATA_TO_WORKDIR){
 			file_put_contents($this->path."/sipgate_csv_verbindungen_$month.csv", $csvdata);
 		}
+		
+		$this->sipgate_trace .= $sg->getTraceString() . "\nend.\n";
 		return $sg->getCallerListArray();
 	}
+	
+	public function getSipgateTrace(){
+		return $this->sipgate_trace;
+	}	
 	
 	/*
 	 * takes the array of calls and tries to match them to the call protocol calls
@@ -109,11 +125,12 @@ class callImportManager{
 				$duration = intval($dur_fragments[0]) * 3600 + intval($dur_fragments[1]) * 60 + intval($dur_fragments[2]); 
 			}
 			else{
-				print "ERROR: Strange duration $call[3]";
+				$this->sipgate_trace .=  "ERROR: Strange duration $call[3]";
+				print $this->sipgate_trace; //exception from the rule
 				die();
 			}
 			
-			$this->db->checkCallUniqueness( array(
+			$this->sipgate_trace .= $this->db->checkCallUniqueness( array(
 				'providerid' => $providerid,
 				'number' => $call[1],
 				'date' => $call[0],
@@ -123,7 +140,7 @@ class callImportManager{
 			));
 		}
 		
-		print "Done.\n";
+		$this->sipgate_trace .= "Done.\n";
 	}
 	
 	/*
@@ -135,7 +152,7 @@ class callImportManager{
 		$fb->logon( FRITZBOX_PASSWORD ); 
 		$fb->loadCallerListFromBox();
 		$fb->logout(); //dummy
-		
+		$trace = "";
 		$calllist = $fb->getCallerListArray();
 		foreach ($calllist as $call){
 			//date, identity, phonenumber, calltype, usedphone, providerstring, provider_id, estimated_duration
@@ -164,11 +181,12 @@ class callImportManager{
 			
 			$insertstring = "'$date','$call[2]','$call[3]','$call[0]','$call[4]','$call[5]','$providerid','$duration'";
 			//print "$insertstring\n";
-			$this->db->insertMonitoredCall( $insertstring );
+			$trace .= $this->db->insertMonitoredCall( $insertstring );
 		}
 		
 		//$csvdata = $fb->getCallerListString();
 		//file_put_contents($this->path."/FRITZ_Box_Anrufliste.csv", $csvdata);
+		return $fb->getTraceString() . $trace;
 	}
 	
 	/*
@@ -201,9 +219,9 @@ class callImportManager{
 	 * todo: at the moment this function is not aware of non-festnetz-phonenumbers which would not belong to the flatrate
 	 */
 	public function markFlateRateCallsAsBilled($provider_id, $rate_type){
-		print "==================================================\n";
-		print "Marking FlateRate calls as billed\n";
-		print "==================================================\n";
+		$trace  = "==================================================\n";
+		$trace .= "Marking FlateRate calls as billed\n";
+		$trace .= "==================================================\n";
 		$query="UPDATE callprotocol SET ".
 				"billed_cost = 0, ".
 				"billed = 2, ". // 2 means that it was done without an evn
@@ -217,14 +235,15 @@ class callImportManager{
 				"ISNULL(billed_duration) AND ".
 				"ISNULL(billed_cost) AND ".
 				"ISNULL(dateoffset)";
-		//print $query . "\n";
+		//$trace .= $query . "\n";
 		$result = mysql_query($query,$this->dbh);
 		if (!$result) {
-    		print 'Invalid query: ' . mysql_errno() . ") ". mysql_error() . "\n";
+    		$trace .= 'Invalid query: ' . mysql_errno() . ") ". mysql_error() . "\n";
 		}
 		else{
-			print "Unbilled flatrate calls have been auto-billed.\n";
+			$trace .= "Unbilled flatrate calls have been auto-billed.\n";
 		}
+		return $trace;
 	}
 }
 

@@ -29,23 +29,33 @@
  * 
  */
 
-
+	/*
+	 * database related settings
+	 */
 	define( 'YAPHOBIA_DB_NAME', 'mysql_database_name');
 	define( 'YAPHOBIA_DB_USER', 'mysql_user_name');
 	define( 'YAPHOBIA_DB_PASSWORD', 'mysql_user_password');
 	define( 'YAPHOBIA_DB_HOST', 'localhost');
-	define( 'YAPHOBIA_WORK_DIR', "/home/your_user/Dokumente/telefonrechnung");
-	define( 'PATH_TO_YAPHOBIA', str_replace("/config","",dirname(__FILE__))  );	
-	//cookiejar dir must be writable from web root
-	define( 'YAPHOBIA_COOKIEJAR_DIR', PATH_TO_YAPHOBIA. '/cookiejar/' ); //ends with a slash
+
+	/*
+	 * database related settings
+	 */
 	
+	define( 'PATH_TO_YAPHOBIA', str_replace("config","",dirname(__FILE__))  );
+		
+	//both directories should be writable from web root
+	define( 'YAPHOBIA_COOKIEJAR_DIR' , PATH_TO_YAPHOBIA. 'cookiejar/' ); //ends with a slash
+	define( 'YAPHOBIA_DATA_EXPORT_DIR', PATH_TO_YAPHOBIA. 'data_export/'); //ends with a slash
+
+	/*
+	 * fritz!box related settings
+	 */
 	define( 'FRITZBOX_HOSTNAME', 'fritz.box');
 	define( 'FRITZBOX_PASSWORD', 'your_individual_password');
 	
 	/*
 	 * sipgate related settings
 	 * if you don't use sipgate, leave SIPGATE_ACTIVE set to false.
-	 *  
 	 */
 	
 	define( 'SIPGATE_ACTIVE',      false );  //true or false, false means all sipgate related stuff will be omitted 

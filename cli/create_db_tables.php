@@ -38,7 +38,6 @@ require_once( PATH_TO_YAPHOBIA. "classes/class.db_manager.php");
 require_once( PATH_TO_YAPHOBIA. "classes/class.install_helpers.php");
 
 $db = new dbMan();
-$dbh = $db->getDBHandle();
-$cdbt = new createDBTables($dbh);
+$ct = new createDBTables($db->getDBHandle());
 
 ?>

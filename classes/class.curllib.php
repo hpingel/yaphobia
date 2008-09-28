@@ -30,7 +30,8 @@ class curllib {
 		$postValues = "",
 		$cookieJarPath = "",
 		$cookieJarInitialized = false,
-		$binaryTransfer = false;
+		$binaryTransfer = false,
+		$trace = "";
 		
 	function __construct (){
 		$this->cookieJarEnabled = false;
@@ -40,9 +41,10 @@ class curllib {
 		$this->cookieJarPath = "";
 		$this->cookieJarInitialized = false;
 		$this->binaryTransfer = false;
+		$this->trace = "";
 		
 		if (!function_exists( "curl_init")){
-			print "\nERROR: Please enable the PHP Extension curl in php.ini file.";
+			die("\nERROR: Please enable the PHP Extension curl in php.ini file.");
 		}
 	}
 	
@@ -50,6 +52,14 @@ class curllib {
 		if ( $this->cookieJarEnabled ){
 			$this->deleteCookieJarFile();
 		}
+	}
+	
+	public function getTraceString (){
+		return $this->trace;
+	}
+
+	public function resetTraceString (){
+		$this->trace = "";
 	}
 	
 	public function enableCookieJar ( $path){
@@ -111,12 +121,12 @@ class curllib {
 	}
 	
 	private function curlRequest ($comment, $urlSuffix ){
-		print "---------------------------------------------------\n";
-		print "REQUEST: $comment\n";
-		print "---------------------------------------------------\n";
+		$this->trace .= "---------------------------------------------------\n";
+		$this->trace .= "REQUEST: $comment\n";
+		$this->trace .= "---------------------------------------------------\n";
 		$ch = curl_init();		
 		curl_setopt($ch, CURLOPT_URL, $this->baseurl . $urlSuffix);
-		print "URL: (" . $this->requestType . ") ". $this->baseurl . $urlSuffix . "\n";
+		$this->trace .= "URL: (" . $this->requestType . ") ". $this->baseurl . $urlSuffix . "\n";
 		curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (X11; U; Linux x86_64; de; rv:1.9.0.1) Gecko/2008072820 Firefox/3.0.1");
 		curl_setopt($ch, CURLOPT_HEADER, 0);
 		//FIXME: we don't want to disable CURLOPT_SSL_VERIFYPEER for security reasons!!!
@@ -125,32 +135,32 @@ class curllib {
 		curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
 		//curl_setopt($ch, CURLOPT_USERPWD, '[username]:[password]');		
 		if ($this->binaryTransfer === true){
-			print "Binary transfer is turned on.\n";
+			$this->trace .= "Binary transfer is turned on.\n";
 			curl_setopt($ch, CURLOPT_BINARYTRANSFER, 1);
 		}
 		if ($this->requestType == "post"){
-			print "Post mode is turned on.\n";
+			$this->trace .= "Post mode is turned on.\n";
 			//curl_setopt($ch, CURLOPT_POST, TRUE);		
 			curl_setopt($ch, CURLOPT_POSTFIELDS, $this->postValues);
-			//print "Postvars: " . $this->postValues. "\n";
+			//$this->trace .= "Postvars: " . $this->postValues. "\n";
 		}
 		
 		if ( $this->cookieJarEnabled ){
 			if (!$this->cookieJarInitialized){
 				if (file_exists($this->cookieJarPath)){
 					$this->deleteCookieJarFile();
-					print "Error: Old cookiejar file was still there at $this->cookieJarPath\n";
+					$this->trace .= "Error: Old cookiejar file was still there at $this->cookieJarPath\n";
 				}
-				print "Cookie jar is turned on and was initialized ($this->cookieJarPath).\n";
+				$this->trace .= "Cookie jar is turned on and was initialized ($this->cookieJarPath).\n";
 				curl_setopt($ch, CURLOPT_COOKIEJAR, $this->cookieJarPath );
 				$this->cookieJarInitialized = true;
 			}
 			else{
 				if (!file_exists($this->cookieJarPath)){
-					print "Error: Cookiejar file doesn't exist at $this->cookieJarPath\n";
+					$this->trace .= "Error: Cookiejar file doesn't exist at $this->cookieJarPath\n";
 				}
 				else{
-					print "Existing cookie jar is used.\n";
+					$this->trace .= "Existing cookie jar is used.\n";
 					
 				}
 				curl_setopt($ch, CURLOPT_COOKIEFILE, $this->cookieJarPath );
@@ -159,9 +169,7 @@ class curllib {
 		}
 		$my_response = curl_exec($ch);
 		  
-		$feedback =  curl_getinfo ( $ch );
-		//print_r ($feedback);
-		print "\n";
+		//$this->trace .= print_r(curl_getinfo ( $ch ), true) . "\n";
 		
 		curl_close($ch);
 		

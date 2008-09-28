@@ -29,33 +29,33 @@
  * 
  */
 
-class sipgateRemote {
+class sipgateRemote extends curllib{
 	
 	var $callerList;
 	var $callerString;
 		
 	function __construct(){
+		parent::__construct();
 		$this->callerList = array();	
 		$this->callerString = "";	
-		$this->sg_remote = new curllib();
-		$this->sg_remote->setBaseUrl("https://secure.sipgate.de/user/");
-		$this->sg_remote->enableCookieJar( YAPHOBIA_COOKIEJAR_DIR . 'cookiejar_sipgate.txt' );
+		$this->setBaseUrl("https://secure.sipgate.de/user/");
+		$this->enableCookieJar( YAPHOBIA_COOKIEJAR_DIR . 'cookiejar_sipgate.txt' );
 		
 	}
 	
 	function logon($user, $password){
 		$comment = "logon to sipgate";
-		$response = $this->sg_remote->postRequest(
+		$response = $this->postRequest(
 			$comment, 
 			"uname=$user&passw=$password&okey.x=7&okey.y=8&lasturi=%2Fuser%2Findex.php&jsh=1", 
 			"index.php"
 		);
-		//print $response;
+		//$this->trace .= $response;
 	}
 	
 	function logout(){
 		$comment = "logoff from sipgate";
-		$response = $this->sg_remote->getRequest(
+		$response = $this->getRequest(
 			$comment, 
 			"logout.php"
 		);
@@ -63,13 +63,13 @@ class sipgateRemote {
 
 	function getEvnOfMonth( $month ){
 		$comment = "trigger evn on sipgate for month $month";
-		$response = $this->sg_remote->getRequest(
+		$response = $this->getRequest(
 			$comment, 
 			"konto_einzel.php?show=all&timeperiod=simple&timeperiod_simpletimeperiod=$month"
 		);
-		//print $response;		
+		//$this->trace .= $response;		
 		$comment = "download csv from sipgate for month $month";		
-		$response = $this->sg_remote->binaryTransfer(
+		$response = $this->binaryTransfer(
 			$comment, 
 			"download_evn.php"
 		);
@@ -86,7 +86,7 @@ class sipgateRemote {
 				$this->callerList[] = $details;
 			}
 			else{
-				print "Line '$line' was skipped because it doesn't represent the expected call format.\n";
+				$this->trace .= "Line '$line' was skipped because it doesn't represent the expected call format.\n";
 			}
 		}
 		return $this->callerList;

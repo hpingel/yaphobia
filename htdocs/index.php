@@ -36,7 +36,7 @@ define(CR,"\n");
      "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
 <head>
-	<title>Yaphobia <?php print YAPHOBIA_VERSION; ?></title>
+	<title>Yaphobia <?php print htmlspecialchars(YAPHOBIA_VERSION); ?></title>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 	<link rel="stylesheet" type="text/css" href="themes/standard/styles.css" />
 	
@@ -74,7 +74,7 @@ if (file_exists(PATH_TO_SETTINGS)){
 	require_once(PATH_TO_SETTINGS);	
 }
 else{
-	die('<p>ERROR: There is no configuration file <b>settings.php</b>!<br/>Please copy <b>settings.defaults.php</b> to <b>settings.php</b> and change the options within the file according to your needs.</p>');
+	die('<div class="welcome"><p>ERROR: There is no configuration file <b>settings.php</b>!<br/>Please copy <b>settings.defaults.php</b> to <b>settings.php</b> and change the options within the file according to your needs.</p></div>');
 }
 
 
@@ -267,23 +267,18 @@ function actions($category){
 				
 		if ( $importType == 1){
 			print '<h2>Anrufliste aus Fritzbox importieren</h2>';
-			print "<pre>";
-			$call_import->getFritzBoxCallerList();
-			print "</pre>";
+			print "<pre>" . htmlspecialchars($call_import->getFritzBoxCallerList()) ."</pre>";
 		}
 		elseif ( $importType == 2 && SIPGATE_ACTIVE){
-			print '<h2>EVN des aktuellen Monats von sipgate runterladen</h2>';
-			print "<pre>";
+			print '<h2>EVN des aktuellen Monats von sipgate importieren</h2>';
 			$sg_callist = $call_import->getSipgateCallsOfCurrentMonth( SIPGATE_USERNAME, SIPGATE_PASSWORD);
 			$call_import->putSipgateCallArrayIntoDB($sg_callist, SIPGATE_PROVIDER_ID);
-			print "</pre>";
-			
+			print "<pre>" . htmlspecialchars( $call_import->getSipgateTrace() ) . "</pre>";
 		}
 		elseif ( $importType == 3 && DUSNET_ACTIVE){
-			print '<h2>EVN des aktuellen Monats von dus.net runterladen</h2>';
-			print "<pre>";
+			print '<h2>EVN des aktuellen Monats von dus.net importieren</h2>';
 			$call_import->getDusNetCalls( DUSNET_PROVIDER_ID, DUSNET_SIPACCOUNT, DUSNET_USERNAME, DUSNET_PASSWORD );
-			print "</pre>";
+			print "<pre>" . htmlspecialchars( $call_import->getDusNetTrace() ) . "</pre>";
 			
 		}
 	}
@@ -440,7 +435,7 @@ function getTableContent($table_headers, $result, $sum_row_content){
 				}
 			}
 			
-			$table_content .= "<td$attributes>" . $value . "</td>".CR;
+			$table_content .= "<td$attributes>" . htmlspecialchars($value) . "</td>".CR;
 	    }
 		$table_content .= "</tr>".CR;
 	}
@@ -451,7 +446,7 @@ function getTableContent($table_headers, $result, $sum_row_content){
 
 ?>
 <hr />
-<p><b>Yaphobia <?php print YAPHOBIA_VERSION;?></b> - Yet Another Phone Bill Application - Licensed under GPL - Get it for free and contribute at <a href="https://sourceforge.net/projects/yaphobia/">https://sourceforge.net/projects/yaphobia/</a>!</p>
+<p><b>Yaphobia <?php print htmlspecialchars(YAPHOBIA_VERSION);?></b> - Yet Another Phone Bill Application - Licensed under GPL - Get it for free and contribute at <a href="https://sourceforge.net/projects/yaphobia/">https://sourceforge.net/projects/yaphobia/</a>!</p>
 
 	</div>
 

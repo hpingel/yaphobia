@@ -22,18 +22,17 @@
 *
 */
 
-class dusnetRemote {
+class dusnetRemote extends curllib{
 	
-	var $dusnet_remote,
-		$parsed_array;
+	var $parsed_array;
 	
 	/*
 	 * constructor
 	 */
 	function __construct(){	
-		$this->dusnet_remote = new curllib();
-		$this->dusnet_remote->setBaseUrl("https://my.dus.net/");
-		$this->dusnet_remote->enableCookieJar( YAPHOBIA_COOKIEJAR_DIR . 'cookiejar_dusnet.txt' );
+		parent::__construct();
+		$this->setBaseUrl("https://my.dus.net/");
+		$this->enableCookieJar( YAPHOBIA_COOKIEJAR_DIR . 'cookiejar_dusnet.txt' );
 		$this->parsed_array = array();
 	}
 	
@@ -44,12 +43,12 @@ class dusnetRemote {
 	 */
 	public function logon($user, $password){
 		$comment = "logon to mydusnet";
-		$response = $this->dusnet_remote->postRequest(
+		$response = $this->postRequest(
 			$comment, 
 			"login=$user&password=$password&submit=Login", 
 			"login.php"
 		);
-		//print $response;
+		//$this->trace .= $response;
 		//normal kommt dann redirect to https://my.dus.net/xp/
 	}
 	
@@ -58,7 +57,7 @@ class dusnetRemote {
 	 */
 	public function logout(){
 		$comment = "logoff from mydusnet";
-		$response = $this->dusnet_remote->getRequest(
+		$response = $this->getRequest(
 			$comment, 
 			"logout.php"
 		);
@@ -106,12 +105,12 @@ class dusnetRemote {
 	private function collectCalls($sipAccount,$postvalues, $comment){	
 		
 		//$sipAccount can also be "alle"
-		$rawdata = $this->dusnet_remote->postRequest(
+		$rawdata = $this->postRequest(
 			$comment, 
 			$postvalues, 
 			"voip_access/evn.php"
 		);
-		//print $response;
+		//$this->trace .= $response;
 							
 		$pattern = "/<tr class=\'(even|odd)'>.*?<\/tr>/s";
 		$pattern_data = "/<td(| align=\"right\")>(.*?)<\/td>/s";
@@ -132,21 +131,21 @@ class dusnetRemote {
 		*/
 		
 		if (preg_match_all( $pattern, $rawdata, $hits2) === false){
-			print "Keine Treffer in Zeilen.\n";
+			$this->trace .=  "Keine Treffer in Zeilen.\n";
 		}
 		else{
-			//print_r($hits);
+			//$this->trace .= print_r($hits, true);
 			$hits = array_reverse($hits2[0]);
 			foreach ($hits as $hit){
 				if (preg_match_all  ( $pattern_data, $hit, $data) === false){
-					print "Keine Treffer in Zellen.\n";
+					$this->trace .= "Keine Treffer in Zellen.\n";
 				}
 				else{
 					if (count($data[2]) != 9){
-						print "Fehler: Es werden neun Datenelemente erwartet!";
+						$this->trace .= "Fehler: Es werden neun Datenelemente erwartet!";
 					} 
 					$data = $data[2];
-					//print_r($data);
+					//$this->trace .= print_r($data, true);
 					 
 					$durationarray = explode(":",$data[6]);
 					if (count($durationarray) == 2){
@@ -162,7 +161,7 @@ class dusnetRemote {
 						$durationstring = $data[6];
 					}
 					else{
-						print "Fehler: Angabe der Dauer ist weder mm:ss noch hh:mm:ss.\n";
+						$this->trace .=  "Fehler: Angabe der Dauer ist weder mm:ss noch hh:mm:ss.\n";
 						$hours   = 0;
 						$minutes = 0;
 						$seconds = 0;
@@ -180,7 +179,7 @@ class dusnetRemote {
 					);
 				}
 			}
-			//print_r($this->parsed_array);
+			//$this->trace .= print_r($this->parsed_array, true);
 			
 		}
 	}
