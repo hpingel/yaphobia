@@ -49,6 +49,22 @@ class callImportManager{
 		$this->sipgate_trace = "";
 		
 	}
+
+	/*
+	 * checks if a file can be created in the export_dir
+	 * and saves it there
+	 */
+	public function createFileInExportDir( $filename, $content){
+		if (is_writeable($filename)){
+			file_put_contents($this->path."sipgate_csv_verbindungen_".$month.".csv", $csvdata);
+			return "File '$filename' has been successfully written.\n";
+		}
+		else{
+			return "ERROR: File '$filename' could not be created.\n";
+			
+		}
+	}
+	
 	
 	/*
 	 * getDusNetCalls
@@ -60,15 +76,14 @@ class callImportManager{
 		$dusnetCon->collectCallsOfCurrentMonth($sipAccount);
 		$dusnetCon->logout();
 		$calllist = $dusnetCon->getCallerListArray();
-
+		$trace = "";
+		
 		//save data as a csv file for backup or testing purposes
 		if (DUSNET_SAVE_CSV_DATA_TO_WORKDIR){
-			$csvdata = $dusnetCon->getCsvData();
-			file_put_contents($this->path."/dusnet_csv_verbindungen.csv", $csvdata);
+			$trace .= $this->createFileInExportDir( $this->path."dusnet_csv_verbindungen.csv", $dusnetCon->getCsvData());
 		}
 		
 		//put calls into db if they are not in there
-		$trace = "";
 		foreach ($calllist as $call){
 			$trace .= $this->db->checkCallUniqueness( array(
 				'providerid'      => $providerId,
@@ -91,15 +106,18 @@ class callImportManager{
 	 * returns the calls in an array, is also able to save the calls as a CSV file to the harddisk
 	 */
 	public function getSipgateCallsOfCurrentMonth( $username, $password ){
+		$trace = "";
 		$sg = new sipgateRemote();
 		$sg->logon($username, $password);
-		$csvdata = $sg->getEvnOfMonth( date('Y', time())."-".date('m', time()) );
+		$month = date('m', time());
+		$year = date('Y', time());
+		$csvdata = $sg->getEvnOfMonth( $year ."-". $month );
 		$sg->logout();
 		if (SIPGATE_SAVE_CSV_DATA_TO_WORKDIR){
-			file_put_contents($this->path."/sipgate_csv_verbindungen_$month.csv", $csvdata);
+			$trace .= $this->createFileInExportDir( $this->path."sipgate_csv_verbindungen_".$month.".csv", $csvdata);
 		}
 		
-		$this->sipgate_trace .= $sg->getTraceString() . "\nend.\n";
+		$this->sipgate_trace .= $sg->getTraceString() . $trace  ."\n";
 		return $sg->getCallerListArray();
 	}
 	
@@ -184,8 +202,9 @@ class callImportManager{
 			$trace .= $this->db->insertMonitoredCall( $insertstring );
 		}
 		
-		//$csvdata = $fb->getCallerListString();
-		//file_put_contents($this->path."/FRITZ_Box_Anrufliste.csv", $csvdata);
+		if (FRITZBOX_SAVE_CALLER_PROTOCOL_TO_EXPORT_DIR){
+			$trace .= $this->createFileInExportDir( $this->path."FRITZ_Box_Anrufliste.csv", $fb->getCallerListString());
+		}
 		return $fb->getTraceString() . $trace;
 	}
 	

@@ -52,7 +52,7 @@
 	 */
 	define( 'FRITZBOX_HOSTNAME', 'fritz.box');
 	define( 'FRITZBOX_PASSWORD', 'your_individual_password');
-	
+	define( 'FRITZBOX_SAVE_CALLER_PROTOCOL_TO_EXPORT_DIR', false); //true or false, save as csv file
 	/*
 	 * sipgate related settings
 	 * if you don't use sipgate, leave SIPGATE_ACTIVE set to false.
