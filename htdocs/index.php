@@ -273,17 +273,22 @@ function actions($category){
 			print '<h2>EVN des aktuellen Monats von sipgate importieren</h2>';
 			$sg_callist = $call_import->getSipgateCallsOfCurrentMonth( SIPGATE_USERNAME, SIPGATE_PASSWORD);
 			$call_import->putSipgateCallArrayIntoDB($sg_callist, SIPGATE_PROVIDER_ID);
-			print "<pre>" . htmlspecialchars( $call_import->getSipgateTrace() ) . "</pre>";
-		}
+			print "<pre>" . htmlspecialchars( $call_import->getTrace() ) . "</pre>";
+					}
 		elseif ( $importType == 3 && DUSNET_ACTIVE){
 			print '<h2>EVN des aktuellen Monats von dus.net importieren</h2>';
-			$call_import->getDusNetCalls( DUSNET_PROVIDER_ID, DUSNET_SIPACCOUNT, DUSNET_USERNAME, DUSNET_PASSWORD );
-			print "<pre>" . htmlspecialchars( $call_import->getDusNetTrace() ) . "</pre>";
+			$dusnet_callist = $call_import->getDusNetCalls( DUSNET_SIPACCOUNT, DUSNET_USERNAME, DUSNET_PASSWORD );
+			$call_import->putDusNetCallArrayIntoDB($dusnet_callist, DUSNET_PROVIDER_ID);
+			print "<pre>" . htmlspecialchars( $call_import->getTrace() ) . "</pre>";
 			
 		}
 	}
 }
 
+/*
+ * creates html form with month selector
+ * 
+ */
 function monthpicker($month, $year, $cat_id){
 	$months = array(
 		'Januar',

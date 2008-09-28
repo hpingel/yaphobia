@@ -57,15 +57,17 @@ if (AUTOBILL_REMAINING_FLATRATE_CALLS)
 	print $call_import->markFlateRateCallsAsBilled('0', 'Flatrate Festnetz');
 
 if (DUSNET_ACTIVE){ 
-	$call_import->getDusNetCalls( DUSNET_PROVIDER_ID, DUSNET_SIPACCOUNT, DUSNET_USERNAME, DUSNET_PASSWORD );
-	print $call_import->getDusNetTrace();
+	$dusnet_callist = $call_import->getDusNetCalls( DUSNET_SIPACCOUNT, DUSNET_USERNAME, DUSNET_PASSWORD );
+	$call_import->putDusNetCallArrayIntoDB($dusnet_callist, DUSNET_PROVIDER_ID);
 }
 	
 if (SIPGATE_ACTIVE){ 
 	$sg_callist = $call_import->getSipgateCallsOfCurrentMonth( SIPGATE_USERNAME, SIPGATE_PASSWORD);
 	$call_import->putSipgateCallArrayIntoDB($sg_callist, SIPGATE_PROVIDER_ID);
-	print $call_import->getSipgateTrace();
 }
+
+print $call_import->getTrace();
+
 
 //searches through database to see if there are new call rates to add to the list
 $call_import->checkForNewRateTypes();

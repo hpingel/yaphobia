@@ -22,68 +22,51 @@
 *
 */
 
-class dusnetRemote extends curllib{
-	
-	var $parsed_array;
+/*
+ * dusnetRemote
+ */
+
+final class dusnetRemote extends billingProviderPrototype{
 	
 	/*
 	 * constructor
 	 */
-	function __construct(){	
-		parent::__construct();
-		$this->setBaseUrl("https://my.dus.net/");
-		$this->enableCookieJar( YAPHOBIA_COOKIEJAR_DIR . 'cookiejar_dusnet.txt' );
-		$this->parsed_array = array();
-	}
-	
-	/*
-	 * logon to my.dus.net
-	 * @username
-	 * @password
-	 */
-	public function logon($user, $password){
-		$comment = "logon to mydusnet";
-		$response = $this->postRequest(
-			$comment, 
-			"login=$user&password=$password&submit=Login", 
-			"login.php"
-		);
-		//$this->trace .= $response;
-		//normal kommt dann redirect to https://my.dus.net/xp/
-	}
-	
-	/*
-	 * logout from my.dus.net
-	 */
-	public function logout(){
-		$comment = "logoff from mydusnet";
-		$response = $this->getRequest(
-			$comment, 
-			"logout.php"
-		);
-	}
-
-	/*
-	 * downloads all calls billed for the current month
-	 * and adds them to array $this->parsed_array
-	 * @sipAccount
-	 */
-	public function collectCallsOfCurrentMonth($sipAccount){
-		$this->collectArchiveCalls(
-			$sipAccount,
-			'01',
-			date('m', time()),
-			date('Y', time()),
-			date('d', time()),
-			date('m', time()),
-			date('Y', time())
-		);
-		$this->collectLatestCalls($sipAccount);
+	function __construct($sipAccount){	
+		parent::__construct("dus.net", "https://my.dus.net/");
+		$this->handleSessionCookies();
+		$this->describeStandardRequests(
+			array(
+				FR_TASK_LOGON => array(
+					FR_TYPE     => FR_TYPE_POST,
+					FR_PATH     => "login.php",
+					FR_POSTVARS => "login=[[USER]]&password=[[PASSWORD]]&submit=Login",
+				),
+				FR_TASK_LOGOUT => array(
+					FR_TYPE     => FR_TYPE_GET,
+					FR_PATH     => "logout.php"
+				),
+				FR_TASK_GETEVNOFMONTH => array(
+					//FIXME: in case the month selected is not the current month, it makes no sense to get the last three days!
+					array(
+						FR_COMMENT  => "get evn data from last 3 days",
+						FR_TYPE     => FR_TYPE_POST,
+						FR_POSTVARS => "sip=$sipAccount&submit=aktualisieren",
+						FR_PATH     => "voip_access/evn.php"
+					),
+					array(
+						FR_COMMENT  => "get evn data from [[YEAR]]-[[MONTH]]-01 to [[YEAR]]-[[MONTH]]-31",
+						FR_TYPE     => FR_TYPE_POST,
+						FR_POSTVARS => "startday=01&startmonth=[[MONTH]]&startyear=[[YEAR]]&endday=31&endmonth=[[MONTH]]&endyear=[[YEAR]]&sip=$sipAccount&archiv=Archiv",
+						FR_PATH     => "voip_access/evn.php"
+					)
+				)
+			)
+		);		
 	}
 	
 	/*
 	 * downloads all calls for a given timespan
-	 * and adds them to array $this->parsed_array
+	 * and adds them to array $this->callerList
 	 * @sipAccount
 	 * ...
 	 */	
@@ -103,15 +86,24 @@ class dusnetRemote extends curllib{
 	}
 	
 	private function collectCalls($sipAccount,$postvalues, $comment){	
-		
 		//$sipAccount can also be "alle"
-		$rawdata = $this->postRequest(
+/*		$this->callerString .= $this->postRequest(
 			$comment, 
 			$postvalues, 
 			"voip_access/evn.php"
+		);*/
+		$this->callerString .= $this->executeFlexRequest(
+			array(
+				FR_COMMENT  => $comment,
+				FR_TYPE     => FR_TYPE_POST,
+				FR_POSTVARS => $postvalues,
+				FR_PATH     => "voip_access/evn.php"
+			)
 		);
-		//$this->trace .= $response;
-							
+		
+	}
+		
+	private function createCallerListArray(){	
 		$pattern = "/<tr class=\'(even|odd)'>.*?<\/tr>/s";
 		$pattern_data = "/<td(| align=\"right\")>(.*?)<\/td>/s";
 		
@@ -126,23 +118,21 @@ class dusnetRemote extends curllib{
 		Kosten in Cent [Abgerechnet laut Tarif] 	
 		Zielnetz
 		
-		open office calc erwartet sipgate-Format:
-		Datum	Nummer	Tarif	Dauer	Minuten	Kosten
 		*/
 		
-		if (preg_match_all( $pattern, $rawdata, $hits2) === false){
-			$this->trace .=  "Keine Treffer in Zeilen.\n";
+		if (preg_match_all( $pattern, $this->callerString, $hits2) === false){
+			$this->trace .=  "STRANGE: No match in rows - no calls.\n";
 		}
 		else{
 			//$this->trace .= print_r($hits, true);
 			$hits = array_reverse($hits2[0]);
 			foreach ($hits as $hit){
 				if (preg_match_all  ( $pattern_data, $hit, $data) === false){
-					$this->trace .= "Keine Treffer in Zellen.\n";
+					$this->trace .= "STRANGE: No match in table cells - no calls.\n";
 				}
 				else{
 					if (count($data[2]) != 9){
-						$this->trace .= "Fehler: Es werden neun Datenelemente erwartet!";
+						$this->trace .= "ERROR: 9 items are expected!";
 					} 
 					$data = $data[2];
 					//$this->trace .= print_r($data, true);
@@ -161,14 +151,14 @@ class dusnetRemote extends curllib{
 						$durationstring = $data[6];
 					}
 					else{
-						$this->trace .=  "Fehler: Angabe der Dauer ist weder mm:ss noch hh:mm:ss.\n";
+						$this->trace .=  "ERROR: Duration format should either be mm:ss or hh:mm:ss.\n";
 						$hours   = 0;
 						$minutes = 0;
 						$seconds = 0;
 						$durationstring = "?";
 					}
 					
-					$this->parsed_array[] = array(
+					$this->callerList[] = array(
 						"Datum" => $data[0],	
 						"Nummer" => $data[3],	
 						"Tarif" => $data[8],
@@ -179,19 +169,26 @@ class dusnetRemote extends curllib{
 					);
 				}
 			}
-			//$this->trace .= print_r($this->parsed_array, true);
+			//$this->trace .= print_r($this->callerList, true);
 			
 		}
 	}
 	
-	function getCallerListArray(){
-		return $this->parsed_array;
+	/*
+	 * returns an multidimensional array containing all collected calls
+	 */
+	public function getCallerListArray(){
+		$this->createCallerListArray();
+		return $this->callerList;
 	}
 	
-	function getCsvData(){
+	/*
+	 * returns all collected calls in form of a csv file
+	 */
+	public function getCsvData(){
 		$csvdata = "";
 		
-		foreach ($this->parsed_array as $calldata){
+		foreach ($this->callerList as $calldata){
 			foreach ($calldata as $name=>$element){
 				$csvdata .= $element;
 				if ($name != "Kosten"){ //last element

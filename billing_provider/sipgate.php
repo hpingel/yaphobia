@@ -22,75 +22,69 @@
 *
 */
 
-
 /*
  * sipgateRemote
- * 
- * 
  */
 
-class sipgateRemote extends curllib{
-	
-	var $callerList;
-	var $callerString;
-		
-	function __construct(){
-		parent::__construct();
-		$this->callerList = array();	
-		$this->callerString = "";	
-		$this->setBaseUrl("https://secure.sipgate.de/user/");
-		$this->enableCookieJar( YAPHOBIA_COOKIEJAR_DIR . 'cookiejar_sipgate.txt' );
-		
-	}
-	
-	function logon($user, $password){
-		$comment = "logon to sipgate";
-		$response = $this->postRequest(
-			$comment, 
-			"uname=$user&passw=$password&okey.x=7&okey.y=8&lasturi=%2Fuser%2Findex.php&jsh=1", 
-			"index.php"
-		);
-		//$this->trace .= $response;
-	}
-	
-	function logout(){
-		$comment = "logoff from sipgate";
-		$response = $this->getRequest(
-			$comment, 
-			"logout.php"
-		);
-	}
+final class sipgateRemote extends billingProviderPrototype{
 
-	function getEvnOfMonth( $month ){
-		$comment = "trigger evn on sipgate for month $month";
-		$response = $this->getRequest(
-			$comment, 
-			"konto_einzel.php?show=all&timeperiod=simple&timeperiod_simpletimeperiod=$month"
+	/*
+	 * constructor
+	 */
+	function __construct( ){
+		parent::__construct("sipgate", "https://secure.sipgate.de/user/");
+		$this->handleSessionCookies();
+		$this->describeStandardRequests(
+			array(
+				FR_TASK_LOGON => array(
+					FR_TYPE     => FR_TYPE_POST,
+					FR_PATH     => "index.php",
+					FR_POSTVARS => "uname=[[USER]]&passw=[[PASSWORD]]&okey.x=7&okey.y=8&lasturi=%2Fuser%2Findex.php&jsh=1"
+				),
+				FR_TASK_LOGOUT => array(
+					FR_TYPE     => FR_TYPE_GET,
+					FR_PATH     => "logout.php"
+				),
+				FR_TASK_GETEVNOFMONTH => array(
+					array(
+						FR_COMMENT => "trigger evn for [[YEAR]]-[[MONTH]]",
+						FR_TYPE    => FR_TYPE_GET,
+						FR_PATH    => "konto_einzel.php?show=all&timeperiod=simple&timeperiod_simpletimeperiod=[[YEAR]]-[[MONTH]]",
+						FR_IGNORE  => true //ignore content of request
+					),
+					//it seems that leaving $month empty returns a complete list of
+					//the complete call history TODO: Check this. 
+					array(
+						FR_COMMENT => "download csv for month [[YEAR]]-[[MONTH]]",
+						FR_TYPE    => FR_TYPE_BINARY,
+						FR_PATH    => "download_evn.php"
+					)
+				)
+			)
 		);
-		//$this->trace .= $response;		
-		$comment = "download csv from sipgate for month $month";		
-		$response = $this->binaryTransfer(
-			$comment, 
-			"download_evn.php"
-		);
-		$this->callerString .= $response;
-		return $response;
-	} 
-
+	}
+	
+	/*
+	 * converts the callerString to an array 
+	 * where each item represents a single call and returns the array
+	 */
 	function getCallerListArray(){
 		$responselines = explode("\n", $this->callerString);
-		
 		foreach($responselines as $line){
 			$details = split(";",$line);
 			if (count($details) == 6 && $details[0] != "Datum"){
 				$this->callerList[] = $details;
 			}
 			else{
-				$this->trace .= "Line '$line' was skipped because it doesn't represent the expected call format.\n";
+				$this->trace .= $this->providerName . ": Line '$line' was skipped because it doesn't represent the expected call format.\n";
 			}
 		}
 		return $this->callerList;
-	}	
+	}
+	
+	public function getCsvData(){
+		return $this->getCallerString();
+	}
 }
 
 

@@ -22,6 +22,17 @@
 *
 */
 
+define( 'FR_TYPE',       'FR_TYPE' );
+define( 'FR_TYPE_GET',   'FR_TYPE_GET' ); 
+define( 'FR_TYPE_POST',  'FR_TYPE_POST' );
+define( 'FR_TYPE_BINARY',  'FR_TYPE_BINARY' );
+
+define( 'FR_PATH',       'FR_PATH' );
+define( 'FR_POSTVARS',   'FR_POSTVARS' ); 
+define( 'FR_CHECKS',     'FR_CHECKS' );
+define( 'FR_COMMENT',    'FR_COMMENT' ); 
+define( 'FR_IGNORE',     'FR_IGNORE' ); 
+
 class curllib {
 	
 	var $cookieJarEnabled = false,
@@ -65,7 +76,6 @@ class curllib {
 	public function enableCookieJar ( $path){
 		$this->cookieJarEnabled = true;
 		$this->cookieJarPath = $path;
-		//FIXME: For security reasons, we should have a salt in the cookie jar filename!!!
 	}
 
 	private function deleteCookieJarFile (){
@@ -93,6 +103,57 @@ class curllib {
 	public function setPostVars ( $vars ){
 	//	if ($vars != "") $this->setRequestType( "post" );
 		$this->postValues = $vars;
+	}
+
+	protected function executeFlexRequest( $comment, $request, $search, $replace){
+		$response = "";
+		if (is_array( $request)){
+			if ( !array_key_exists( FR_TYPE, $request) && isset($request[0]) && is_array( $request[0] )) {
+				//$this->trace .= "NOTICE: detected multiple requests: ". count($request) ."\n";
+				
+				foreach ($request as $single_request){
+					$single_request[ FR_COMMENT ] = str_replace($search, $replace, $single_request[ FR_COMMENT ]);
+					$response .= $this->executeFlexRequest( $single_request[ FR_COMMENT ], $single_request, $search, $replace);
+				}
+			}
+			else{
+				//$this->trace .= "NOTICE: detected single request.\n";
+				if ((is_array($search) && is_array($replace) && count($search) == count($replace) && count($replace) > 1) || (is_string($search) && is_string($replace))){
+					foreach ($request as $key => $property){
+						$request[$key] = str_replace($search, $replace, $property);
+					}
+				}
+				else{
+					//$this->trace .= "NOTICE: replace operation was skipped.\n";
+				}
+				$response .= $this->executeSingleFlexRequest( $comment, $request);
+			}
+		}
+		else{
+			$this->trace .= "ERROR: A flex request should always be of type array: '".$request."'\n";
+		}
+		return $response;
+	}	
+	
+	
+	protected function executeSingleFlexRequest( $comment, $request){
+		//$this->trace .= print_r($request, true);
+		switch ($request[ FR_TYPE ]) {
+		case FR_TYPE_GET:
+		    $response = $this->getRequest ($comment, $request[ FR_PATH ]);
+			break;
+		case FR_TYPE_POST:
+		    $response = $this->postRequest ($comment, $request[ FR_POSTVARS ], $request[ FR_PATH ]);
+		    break;
+		case FR_TYPE_BINARY:
+		    $response = $this->binaryTransfer ($comment, $request[ FR_PATH ]);
+			break;
+		}
+		if ($request[ FR_IGNORE ] == true){
+			$response = "";
+			$this->trace .= "Content of this request will not be added to resultset.\n";
+		} 
+		return $response;
 	}
 	
 	public function postRequest ($comment, $postfields, $urlSuffix){
@@ -139,7 +200,7 @@ class curllib {
 			curl_setopt($ch, CURLOPT_BINARYTRANSFER, 1);
 		}
 		if ($this->requestType == "post"){
-			$this->trace .= "Post mode is turned on.\n";
+			//$this->trace .= "Post mode is turned on.\n";
 			//curl_setopt($ch, CURLOPT_POST, TRUE);		
 			curl_setopt($ch, CURLOPT_POSTFIELDS, $this->postValues);
 			//$this->trace .= "Postvars: " . $this->postValues. "\n";
@@ -173,9 +234,23 @@ class curllib {
 		
 		curl_close($ch);
 		
+		//$this->trace .= "---------------------------------------------------\n";
 		return $my_response;
 	}
-	
+
+	/*
+	 * checks if a file can be created in the export_dir
+	 * and saves it there
+	 */
+	public function createFileInExportDir( $filename, $content){
+		if (@file_put_contents($filename, $content) !== false){
+			return "File '$filename' has been successfully written.\n";
+		}
+		else{
+			return "ERROR: File '$filename' could not be created.\n";
+			
+		}
+	}	
 }
 
 ?>

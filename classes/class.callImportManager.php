@@ -24,7 +24,9 @@
 
 define( 'PATH_TO_YAPHOBIA_CIM', str_replace("classes","",dirname(__FILE__)) ); 
 
+require_once( PATH_TO_YAPHOBIA_CIM. "interfaces/interface.billingProvider.php");
 require_once( PATH_TO_YAPHOBIA_CIM. "classes/class.curllib.php");
+require_once( PATH_TO_YAPHOBIA_CIM. "classes/class.billingProviderPrototype.php");
 require_once( PATH_TO_YAPHOBIA_CIM. "billing_provider/dusnet.php");
 require_once( PATH_TO_YAPHOBIA_CIM. "billing_provider/sipgate.php");
 require_once( PATH_TO_YAPHOBIA_CIM. "protocol_provider/fritzbox.php");
@@ -33,9 +35,7 @@ class callImportManager{
 	
 	var $db,
 		$dbh,
-		$path,
-		$dusnet_trace,
-		$sipgate_trace,
+		$trace,
 		$currentMonth,
 		$currentYear;
 		
@@ -45,52 +45,44 @@ class callImportManager{
 	function __construct($db){
 		$this->db = $db;
 		$this->dbh = $this->db->getDBHandle();
-		$this->path = YAPHOBIA_DATA_EXPORT_DIR;
 		$this->dusnet_trace = "";
-		$this->sipgate_trace = "";
+		$this->trace = "";
 		$this->currentMonth = date('m', time());
 		$this->currentYear = date('Y', time());
 	}
-
-	/*
-	 * checks if a file can be created in the export_dir
-	 * and saves it there
-	 */
-	public function createFileInExportDir( $filename, $content){
-		if (@file_put_contents($filename, $content) !== false){
-			return "File '$filename' has been successfully written.\n";
-		}
-		else{
-			return "ERROR: File '$filename' could not be created.\n";
-			
-		}
+	
+	public function getTrace(){
+		return $this->trace;
 	}
 	
-	
+	/*
+	 * getProviderCalls
+	 */
+	private function getBillingProviderCalls( $p, $username, $password, $csv_file_flag){
+		
+		$p->logon($username , $password);
+		$p->getEvnOfMonth( $this->currentYear, $this->currentMonth );
+		$p->logout();
+		$calllist = $p->getCallerListArray();
+		if ($csv_file_flag) $p->createCsvFile();
+		$this->trace = $p->getTraceString() . "\n";
+		return $calllist;
+	}
+
 	/*
 	 * getDusNetCalls
 	 */
-	public function getDusNetCalls( $providerId, $sipAccount, $username, $password){
-		
-		$dusnetCon = new dusnetRemote();
-		$dusnetCon->logon($username , $password);
-		$dusnetCon->collectCallsOfCurrentMonth($sipAccount);
-		$dusnetCon->logout();
-		$calllist = $dusnetCon->getCallerListArray();
-		$trace = "";
-		
-		//save data as a csv file for backup or testing purposes
-		if (DUSNET_SAVE_CSV_DATA_TO_WORKDIR){
-			$trace .= 
-				$this->createFileInExportDir( 
-					$this->path."dusnet_connections_csv_".$this->currentYear."-".$this->currentMonth.".csv", 
-					$dusnetCon->getCsvData()
-				);
-		}
-		
-		//put calls into db if they are not in there
+	public function getDusNetCalls( $sipAccount, $username, $password){
+		$dn = new dusnetRemote($sipAccount);
+		return $this->getBillingProviderCalls($dn, $username, $password, DUSNET_SAVE_CSV_DATA_TO_WORKDIR);
+	}
+
+	/*
+	 * put dusnet calls into db if they are not in there
+	 */
+	public function putDusNetCallArrayIntoDB($calllist, $providerId){		
 		foreach ($calllist as $call){
-			$trace .= $this->db->checkCallUniqueness( array(
+			$this->trace .= $this->db->checkCallUniqueness( array(
 				'providerid'      => $providerId,
 				'number'          => $call["Nummer"],
 				'date'            => $call["Datum"],
@@ -99,34 +91,15 @@ class callImportManager{
 				'billed_cost'     => $call["Kosten"]
 			));
 		}
-		
-		$this->dusnet_trace = $dusnetCon->getTraceString() . $trace . "\nend.\n";
 	}
 	
-	public function getDusNetTrace(){
-		return $this->dusnet_trace;
-	}
-
 	/*
 	 * returns the calls in an array, is also able to save the calls as a CSV file to the harddisk
 	 */
 	public function getSipgateCallsOfCurrentMonth( $username, $password ){
-		$trace = "";
 		$sg = new sipgateRemote();
-		$sg->logon($username, $password);
-		$csvdata = $sg->getEvnOfMonth( $this->currentYear ."-". $this->currentMonth );
-		$sg->logout();
-		if (SIPGATE_SAVE_CSV_DATA_TO_WORKDIR){
-			$trace .= $this->createFileInExportDir( $this->path."sipgate_csv_verbindungen_".$this->currentYear."-".$this->currentMonth.".csv", $csvdata);
-		}
-		
-		$this->sipgate_trace .= $sg->getTraceString() . $trace  ."\n";
-		return $sg->getCallerListArray();
+		return $this->getBillingProviderCalls( $sg, $username, $password, SIPGATE_SAVE_CSV_DATA_TO_WORKDIR);
 	}
-	
-	public function getSipgateTrace(){
-		return $this->sipgate_trace;
-	}	
 	
 	/*
 	 * takes the array of calls and tries to match them to the call protocol calls
@@ -146,12 +119,12 @@ class callImportManager{
 				$duration = intval($dur_fragments[0]) * 3600 + intval($dur_fragments[1]) * 60 + intval($dur_fragments[2]); 
 			}
 			else{
-				$this->sipgate_trace .=  "ERROR: Strange duration $call[3]";
-				print $this->sipgate_trace; //exception from the rule
+				$this->trace .=  "ERROR: Strange duration $call[3]";
+				print $this->trace; //exception from the rule
 				die();
 			}
 			
-			$this->sipgate_trace .= $this->db->checkCallUniqueness( array(
+			$this->trace .= $this->db->checkCallUniqueness( array(
 				'providerid' => $providerid,
 				'number' => $call[1],
 				'date' => $call[0],
@@ -161,7 +134,7 @@ class callImportManager{
 			));
 		}
 		
-		$this->sipgate_trace .= "Done.\n";
+		$this->trace .= "Done.\n";
 	}
 	
 	/*
@@ -206,7 +179,7 @@ class callImportManager{
 		}
 		
 		if (FRITZBOX_SAVE_CALLER_PROTOCOL_TO_EXPORT_DIR){
-			$trace .= $this->createFileInExportDir( $this->path."FRITZ_Box_Anrufliste.csv", $fb->getCallerListString());
+			$trace .= $fb->createFileInExportDir( YAPHOBIA_DATA_EXPORT_DIR."FRITZ_Box_Anrufliste.csv", $fb->getCallerListString());
 		}
 		return $fb->getTraceString() . $trace;
 	}
