@@ -31,8 +31,8 @@ final class sipgateRemote extends billingProviderPrototype{
 	/*
 	 * constructor
 	 */
-	function __construct( ){
-		parent::__construct("sipgate", "https://secure.sipgate.de/user/");
+	function __construct( $traceObj ){
+		parent::__construct("sipgate", "https://secure.sipgate.de/user/", $traceObj);
 		$this->handleSessionCookies();
 		$this->describeStandardRequests(
 			array(

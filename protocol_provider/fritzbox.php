@@ -33,8 +33,8 @@ class fritzBoxRemote extends curllib {
 	var $callerList;
 	var $callerString;
 	
-	function __construct(){
-		parent::__construct();
+	function __construct($traceObj){
+		parent::__construct($traceObj);
 		$this->callerList = array();	
 		$this->callerString = "";	
 		$this->setBaseUrl("http://".FRITZBOX_HOSTNAME."/");

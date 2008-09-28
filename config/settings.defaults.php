@@ -38,7 +38,7 @@
 	define( 'YAPHOBIA_DB_HOST', 'localhost');
 
 	/*
-	 * database related settings
+	 * global settings
 	 */
 	
 	define( 'PATH_TO_YAPHOBIA', str_replace("config","",dirname(__FILE__))  );
@@ -109,7 +109,11 @@
 	define( 'TOLERANCE_CALL_BEGIN', 120); //in seconds
 	define( 'TOLERANCE_CALL_DURATION', 180); //in seconds
 
-
-
+	/*
+	 *  tracing / debug settings
+	 */
+	
+	define( 'TRACE_LEVEL', 2); //0-5
+	
 
 ?>

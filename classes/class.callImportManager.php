@@ -35,6 +35,7 @@ class callImportManager{
 	
 	var $db,
 		$dbh,
+		$tr,
 		$trace,
 		$currentMonth,
 		$currentYear;
@@ -42,7 +43,8 @@ class callImportManager{
 	/*
 	 * constructor
 	 */
-	function __construct($db){
+	function __construct($db, $traceObj){
+		$this->tr = $traceObj;
 		$this->db = $db;
 		$this->dbh = $this->db->getDBHandle();
 		$this->dusnet_trace = "";
@@ -73,7 +75,7 @@ class callImportManager{
 	 * getDusNetCalls
 	 */
 	public function getDusNetCalls( $sipAccount, $username, $password){
-		$dn = new dusnetRemote($sipAccount);
+		$dn = new dusnetRemote($sipAccount, $this->tr);
 		return $this->getBillingProviderCalls($dn, $username, $password, DUSNET_SAVE_CSV_DATA_TO_WORKDIR);
 	}
 
@@ -97,7 +99,7 @@ class callImportManager{
 	 * returns the calls in an array, is also able to save the calls as a CSV file to the harddisk
 	 */
 	public function getSipgateCallsOfCurrentMonth( $username, $password ){
-		$sg = new sipgateRemote();
+		$sg = new sipgateRemote($this->tr);
 		return $this->getBillingProviderCalls( $sg, $username, $password, SIPGATE_SAVE_CSV_DATA_TO_WORKDIR);
 	}
 	
@@ -141,7 +143,7 @@ class callImportManager{
 	 * getFritzBoxCallerList
 	 */
 	public function getFritzBoxCallerList(){
-		$fb = new fritzBoxRemote();
+		$fb = new fritzBoxRemote($this->tr);
 		//$fb->loadCallerListsFromDir( $path . "/fritzbox_alte_anruflisten");
 		$fb->logon( FRITZBOX_PASSWORD ); 
 		$fb->loadCallerListFromBox();

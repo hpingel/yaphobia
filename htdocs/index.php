@@ -22,6 +22,7 @@
 *
 */
 
+require_once( "../classes/class.trace.php");
 require_once( "../classes/class.db_manager.php");
 require_once( "../classes/class.callImportManager.php");
 
@@ -262,8 +263,9 @@ function actions($category){
 		}
 		else{
 		}
-		
-		$call_import = new callImportManager($db);
+
+		$tr = new trace('html');
+		$call_import = new callImportManager($db, $tr);
 				
 		if ( $importType == 1){
 			print '<h2>Anrufliste aus Fritzbox importieren</h2>';

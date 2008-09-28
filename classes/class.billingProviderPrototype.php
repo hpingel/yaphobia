@@ -42,8 +42,8 @@ class billingProviderPrototype extends curllib implements billingProvider {
 		$requestDescriptions,
 		$csvFilenameSuffix;
 		
-	function __construct($name, $baseURL){
-		parent::__construct();
+	function __construct($name, $baseURL, $traceObj){
+		parent::__construct($traceObj);
 		$this->providerName = $name;
 		$this->callerList = array();	
 		$this->callerString = "";	

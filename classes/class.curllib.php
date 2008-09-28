@@ -42,9 +42,10 @@ class curllib {
 		$cookieJarPath = "",
 		$cookieJarInitialized = false,
 		$binaryTransfer = false,
-		$trace = "";
+		$trace = "",
+		$tr;
 		
-	function __construct (){
+	function __construct ($tr){
 		$this->cookieJarEnabled = false;
 		$this->baseurl = "";
 		$this->requestType = "get";
@@ -53,9 +54,10 @@ class curllib {
 		$this->cookieJarInitialized = false;
 		$this->binaryTransfer = false;
 		$this->trace = "";
+		$this->tr = $tr;
 		
 		if (!function_exists( "curl_init")){
-			die("\nERROR: Please enable the PHP Extension curl in php.ini file.");
+			$this->tr->addToTrace(0, "Please enable the PHP Extension curl in php.ini file.");
 		}
 	}
 	
@@ -109,7 +111,7 @@ class curllib {
 		$response = "";
 		if (is_array( $request)){
 			if ( !array_key_exists( FR_TYPE, $request) && isset($request[0]) && is_array( $request[0] )) {
-				//$this->trace .= "NOTICE: detected multiple requests: ". count($request) ."\n";
+				$this->tr->addToTrace(4, "detected multiple requests: ". count($request));
 				
 				foreach ($request as $single_request){
 					$single_request[ FR_COMMENT ] = str_replace($search, $replace, $single_request[ FR_COMMENT ]);
@@ -117,27 +119,27 @@ class curllib {
 				}
 			}
 			else{
-				//$this->trace .= "NOTICE: detected single request.\n";
+				$this->tr->addToTrace(4, "Detected single request.");
 				if ((is_array($search) && is_array($replace) && count($search) == count($replace) && count($replace) > 1) || (is_string($search) && is_string($replace))){
 					foreach ($request as $key => $property){
 						$request[$key] = str_replace($search, $replace, $property);
 					}
 				}
 				else{
-					//$this->trace .= "NOTICE: replace operation was skipped.\n";
+					$this->tr->addToTrace(4, "replace operation was skipped");
 				}
 				$response .= $this->executeSingleFlexRequest( $comment, $request);
 			}
 		}
 		else{
-			$this->trace .= "ERROR: A flex request should always be of type array: '".$request."'\n";
+			$this->tr->addToTrace(1, "ERROR: A flex request should always be of type array: '".$request."'");
 		}
 		return $response;
 	}	
 	
 	
 	protected function executeSingleFlexRequest( $comment, $request){
-		//$this->trace .= print_r($request, true);
+		$this->tr->addToTrace(4, print_r($request, true));
 		switch ($request[ FR_TYPE ]) {
 		case FR_TYPE_GET:
 		    $response = $this->getRequest ($comment, $request[ FR_PATH ]);
@@ -151,7 +153,7 @@ class curllib {
 		}
 		if ($request[ FR_IGNORE ] == true){
 			$response = "";
-			$this->trace .= "Content of this request will not be added to resultset.\n";
+			$this->tr->addToTrace(3, "Content of this request will not be added to resultset.");
 		} 
 		return $response;
 	}
@@ -182,46 +184,46 @@ class curllib {
 	}
 	
 	private function curlRequest ($comment, $urlSuffix ){
-		$this->trace .= "---------------------------------------------------\n";
-		$this->trace .= "REQUEST: $comment\n";
-		$this->trace .= "---------------------------------------------------\n";
+		$this->tr->addToTrace(4, "---------------------------------------------------");
+		$this->tr->addToTrace(3, "REQUEST: $comment");
+		$this->tr->addToTrace(4, "---------------------------------------------------");
 		$ch = curl_init();		
 		curl_setopt($ch, CURLOPT_URL, $this->baseurl . $urlSuffix);
-		$this->trace .= "URL: (" . $this->requestType . ") ". $this->baseurl . $urlSuffix . "\n";
+		$this->tr->addToTrace(4, "URL: (" . $this->requestType . ") ". $this->baseurl . $urlSuffix );
 		curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (X11; U; Linux x86_64; de; rv:1.9.0.1) Gecko/2008072820 Firefox/3.0.1");
+		//FIXME: Make user agent + proxy settings flexible
 		curl_setopt($ch, CURLOPT_HEADER, 0);
 		//FIXME: we don't want to disable CURLOPT_SSL_VERIFYPEER for security reasons!!!
 		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER,1 );
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1 );
 		curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
 		//curl_setopt($ch, CURLOPT_USERPWD, '[username]:[password]');		
 		if ($this->binaryTransfer === true){
-			$this->trace .= "Binary transfer is turned on.\n";
+			$this->tr->addToTrace(4, "Binary transfer is turned on.");
 			curl_setopt($ch, CURLOPT_BINARYTRANSFER, 1);
 		}
 		if ($this->requestType == "post"){
-			//$this->trace .= "Post mode is turned on.\n";
 			//curl_setopt($ch, CURLOPT_POST, TRUE);		
 			curl_setopt($ch, CURLOPT_POSTFIELDS, $this->postValues);
-			//$this->trace .= "Postvars: " . $this->postValues. "\n";
+			$this->tr->addToTrace(4, "Postvars: " . $this->postValues );
 		}
 		
 		if ( $this->cookieJarEnabled ){
 			if (!$this->cookieJarInitialized){
 				if (file_exists($this->cookieJarPath)){
 					$this->deleteCookieJarFile();
-					$this->trace .= "Error: Old cookiejar file was still there at $this->cookieJarPath\n";
+					$this->tr->addToTrace(1,"Old cookiejar file was still there at $this->cookieJarPath");
 				}
-				$this->trace .= "Cookie jar is turned on and was initialized ($this->cookieJarPath).\n";
+				$this->tr->addToTrace(4,"Cookie jar is turned on and was initialized ($this->cookieJarPath)");
 				curl_setopt($ch, CURLOPT_COOKIEJAR, $this->cookieJarPath );
 				$this->cookieJarInitialized = true;
 			}
 			else{
 				if (!file_exists($this->cookieJarPath)){
-					$this->trace .= "Error: Cookiejar file doesn't exist at $this->cookieJarPath\n";
+					$this->tr->addToTrace(1,"Cookiejar file doesn't exist at $this->cookieJarPath");
 				}
 				else{
-					$this->trace .= "Existing cookie jar is used.\n";
+					$this->tr->addToTrace(4,"Existing cookie jar is used.");
 					
 				}
 				curl_setopt($ch, CURLOPT_COOKIEFILE, $this->cookieJarPath );
@@ -230,11 +232,10 @@ class curllib {
 		}
 		$my_response = curl_exec($ch);
 		  
-		//$this->trace .= print_r(curl_getinfo ( $ch ), true) . "\n";
+		$this->tr->addToTrace(5, print_r(curl_getinfo ( $ch ), true) );
 		
 		curl_close($ch);
 		
-		//$this->trace .= "---------------------------------------------------\n";
 		return $my_response;
 	}
 

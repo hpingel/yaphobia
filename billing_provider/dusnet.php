@@ -31,8 +31,8 @@ final class dusnetRemote extends billingProviderPrototype{
 	/*
 	 * constructor
 	 */
-	function __construct($sipAccount){	
-		parent::__construct("dus.net", "https://my.dus.net/");
+	function __construct($sipAccount, $traceObj){	
+		parent::__construct("dus.net", "https://my.dus.net/", $traceObj);
 		$this->handleSessionCookies();
 		$this->describeStandardRequests(
 			array(
