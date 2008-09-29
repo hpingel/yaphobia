@@ -25,14 +25,17 @@
 require_once( "../classes/class.trace.php");
 require_once( "../classes/class.db_manager.php");
 require_once( "../classes/class.callImportManager.php");
+require_once( "../classes/class.installHelpers.php");
+
 
 //check for show stoppers:
 //1) presence of settings file
 //2) correct authentication 
+//3) mandatory configuration constants
 define( 'PATH_TO_SETTINGS', str_replace("htdocs","",dirname(__FILE__)) . 'config/settings.php' ); 
 if (file_exists(PATH_TO_SETTINGS)){
 	require_once(PATH_TO_SETTINGS);	
-	if (YAPHOBIA_WEB_INTERFACE_PASSWORD != ''){
+	if (defined('YAPHOBIA_WEB_INTERFACE_PASSWORD') && YAPHOBIA_WEB_INTERFACE_PASSWORD != ''){
 		session_start();
 		//check if session is authenticated
 		if (!session_is_registered('AUTHENTICATED')){
@@ -59,6 +62,10 @@ if (file_exists(PATH_TO_SETTINGS)){
 			}
 		}
 	}
+	$ih = new installHelpers();
+	$sermon = $ih->proofreadMandatorySettings();
+	if ($sermon != "") 
+		define('CLOSE_GATE', '<div class="welcome" style="text-align: left;">' . $sermon . '</div>');
 }
 else{
 	define('CLOSE_GATE', '<div class="welcome"><p>ERROR: There is no configuration file <b>settings.php</b>!<br/>Please copy <b>settings.defaults.php</b> to <b>settings.php</b> and change the options within the file according to your needs.</p></div>');
@@ -96,15 +103,14 @@ $category_menu = array(
 	4 => 'Jahres&uuml;berblick',
 	5 => 'Weitere Statistiken',
 	6 => 'Datenimport',
+	7 => 'Konfigurations-Check'
 );
 
 if (YAPHOBIA_WEB_INTERFACE_PASSWORD != ''){
 	$category_menu[CATEGORY_LOGOUT] = 'Logout';
 }
 
-
-
-$cat = isset($_REQUEST["category"]) ? intval($_REQUEST["category"]) : 0;
+$cat = isset($_REQUEST["category"]) ? intval($_REQUEST["category"]) : 1;
 
 print '<div class="yaph_header"><h1>Yaphobia</h1>';
 
@@ -139,8 +145,8 @@ function actions($category){
 	if (mysql_num_rows($result) === 0){
 		print '<div class="welcome"><h2>Welcome!</h2><p>It seems that your MySQL database is completely empty.<br/>You are probably running Yaphobia for the first time.</br> '.
 			'Needed database tables will be created in the database now...</p><pre></div>';
-		require_once( "../classes/class.install_helpers.php");
-		$cdbt = new createDBTables($dbh);	
+		$ih = new installHelpers();
+		$ih->createDBTables($dbh);	
 		print "</pre>";
 		$category = 0;
 	}
@@ -332,7 +338,13 @@ function actions($category){
 			
 		}
 	}
-	elseif($category == CATEGORY_LOGOUT && YAPHOBIA_WEB_INTERFACE_PASSWORD != ""){
+	elseif ( $category == 7 ){
+		print "<p>This check can help you to find problems in your setup</p>";
+		$ih = new installHelpers();
+		$sermon = $ih->proofreadOptionalSettings();
+		print '<div class="welcome" style="text-align: left;"><h1>Checking optional configuration parameters</h1>' . $sermon . '</div>';
+	}
+	elseif ( $category == CATEGORY_LOGOUT && YAPHOBIA_WEB_INTERFACE_PASSWORD != "" ){
 		session_unregister('AUTHENTICATED'); //logout
 		session_unregister('MULTIPLE_LOGIN_ATTEMPT');
 		print '<div class="welcome"><h1>Logout successful.</h1>'.

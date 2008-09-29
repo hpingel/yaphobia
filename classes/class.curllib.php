@@ -56,6 +56,7 @@ class curllib {
 		$this->trace = "";
 		$this->tr = $tr;
 		
+		//FIXME: use get_loaded_extensions instead to check if curl is enabled
 		if (!function_exists( "curl_init")){
 			$this->tr->addToTrace(0, "Please enable the PHP Extension curl in php.ini file.");
 		}
