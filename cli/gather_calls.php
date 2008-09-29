@@ -51,8 +51,9 @@ print " automatically.\n";
 print "==================================================\n";
 
 $db = new dbMan();
+$dbh = $db->getDBHandle();
 $traceObj = new trace('text');
-$call_import = new callImportManager($db, $traceObj);
+$call_import = new callImportManager($dbh, $traceObj);
 print $call_import->getFritzBoxCallerList();
 
 if (AUTOBILL_REMAINING_FLATRATE_CALLS)

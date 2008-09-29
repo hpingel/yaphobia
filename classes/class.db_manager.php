@@ -35,11 +35,10 @@ class dbMan {
 	function __construct(){
 		$this->db = @mysql_connect( YAPHOBIA_DB_HOST, YAPHOBIA_DB_USER, YAPHOBIA_DB_PASSWORD );
 		if (mysql_errno() != 0){
-			die('<div class="welcome"><h2>Problem with database settings.</h2>Error on database connection attempt: <b>'. mysql_error().'</b>. Please check your database parameters in config/settings.php.</div>');
+			die('<div class="welcome"><h2>Couldn\'t connect to database!</h2>Error message:<br/><b>'. mysql_error().'</b>.<br/>Please check your database parameters in config/settings.php.</div>');
 		}
-		mysql_select_db  ( YAPHOBIA_DB_NAME , $this->db );
-		if (mysql_errno() != 0){
-			die('<div class="welcome"><h2>Problem with database settings.</h2>Error on database selection attempt: <b>'. mysql_error().'</b>. Please check your database parameters in config/settings.php.</div>');
+		if ( mysql_select_db( YAPHOBIA_DB_NAME , $this->db ) === false){
+			die('<div class="welcome"><h2>Problem on accessing database "'.YAPHOBIA_DB_NAME.'".<br/></h2>Error on database selection attempt:<br/><b>'. mysql_error().'</b>.<br/>Please check your database parameters in config/settings.php.</div>');
 		}
 	}
 
@@ -56,91 +55,6 @@ class dbMan {
 	 */
 	public function getDBHandle( ){	
 			return $this->db;
-	}
-	
-	/*
-	 * tries to insert a call from a call protocol (for example from Fritz!Box) to the database
-	 * if the call already is in the database table, it will not be added another time
-	 */
-	function insertMonitoredCall( $values ){
-		$trace = "";
-		$query = "INSERT INTO callprotocol (date, identity, phonenumber, calltype, usedphone, providerstring, provider_id, estimated_duration)".
-		$query .= " VALUES (" . $values . ")";
-		$trace .= "Checking presence of call: $values\n";
-		
-		$result = mysql_query($query,$this->db);
-		if (!$result) {
-			if (mysql_errno() == 1062){
-				$trace .= "Duplicate call was skipped! Is already in database.\n";
-			}
-			else
-	    		$trace .= 'Invalid query: ' . mysql_errno() . ") ". mysql_error() . "\n";
-		}
-		else{
-			$trace .= "Call added to database.\n";
-		}
-		return $trace;
-	}
-	
-	/*
-	 * check if we can find a matching call from the call protocol for a call from a phone bill
-	 * if this is possible (single call is found) we update the call protocol entry with the 
-	 * billing information 
-	 */
-	function checkCallUniqueness($x){
-		$trace = "";
-		$tolerance_span_call_begin = TOLERANCE_CALL_BEGIN; //in seconds
-		$tolerance_span_duration = TOLERANCE_CALL_DURATION; //in seconds
-		
-		//security: prevent the possiblity of sql injections
-		foreach ($x as $key=>$value){
-			$x[$key] = mysql_real_escape_string( $value);
-		}
-		
-		$update= 
-			"billed = '1', ".
-			"dateoffset = TIMESTAMPDIFF(SECOND, date,'".$x['date']."'), ".
-			"rate_type = '".$x['rate_description']."', ".
-			"rate_type_id = '0', ".
-			"billed_duration = '".$x['duration']."', ".
-			"billed_cost = '". floatval(str_replace(',','.',$x['billed_cost']))."'";
-		
-		$where = 
-			"phonenumber = '".$x['number']."' AND ".
-			"ABS(TIMESTAMPDIFF(SECOND, date,'".$x['date']."')) < $tolerance_span_call_begin AND ".
-			"ABS( estimated_duration *60 - ".$x['duration'].") < $tolerance_span_duration ";
-		
-		$whereStart = "WHERE calltype='3' AND provider_id = '".$x['providerid']."' AND "; 
-		$query = "SELECT * FROM callprotocol $whereStart $where"; 
-		//print "Query: $query\n";
-		$result = mysql_query( $query, $this->db );
-		$matches = mysql_num_rows($result);
-		if ($matches > 1){
-			$trace .= "ERROR: Not able to match following call in protocol:\n";
-			$trace .= print_r($x, true);
-			$trace .= "See possible matches here:\n";
-			while ($row = mysql_fetch_assoc($result)) {
-			    $trace .= print_r($row, true);
-			}		
-		}
-		elseif ($matches == 0){
-			$trace .= "ERROR: No match in call protocol for following call:\n";
-			$trace .= print_r ($x, true);
-		}
-		else{
-			$row = mysql_fetch_assoc($result);
-			if ($row['billed'] != '1'){
-				$trace .=  "Call (". $x["date"] . " ". $x["number"] . "): Found, updating call info.\n";
-				$query = "UPDATE callprotocol SET $update $whereStart $where";
-				//$trace .= "Query: $query\n";
-				$result = mysql_query( $query, $this->db );
-			}
-			else{
-				$trace .= "Call (". $x["date"] . " ". $x["number"] . "): Already billed. Skipped.\n";
-			}
-			
-		}
-		return $trace;
 	}
 	
 	/*

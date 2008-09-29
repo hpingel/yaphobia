@@ -140,7 +140,7 @@ class installHelpers{
 			'PATH_TO_YAPHOBIA' => str_replace("classes","",dirname(__FILE__)),
 			'YAPHOBIA_COOKIEJAR_DIR'  => PATH_TO_YAPHOBIA. 'cookiejar/',
 			'YAPHOBIA_DATA_EXPORT_DIR' => PATH_TO_YAPHOBIA. 'data_export/',
-			'YAPHOBIA_WEB_INTERFACE_PASSWORD' => '', //authentication is disabled
+			'YAPHOBIA_WEB_INTERFACE_PASSWORD' => "", //authentication is disabled
 		
 			'FRITZBOX_HOSTNAME' => 'fritz!box',
 			'FRITZBOX_PASSWORD' => '',

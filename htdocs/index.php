@@ -35,7 +35,7 @@ require_once( "../classes/class.installHelpers.php");
 define( 'PATH_TO_SETTINGS', str_replace("htdocs","",dirname(__FILE__)) . 'config/settings.php' ); 
 if (file_exists(PATH_TO_SETTINGS)){
 	require_once(PATH_TO_SETTINGS);	
-	if (defined('YAPHOBIA_WEB_INTERFACE_PASSWORD') && YAPHOBIA_WEB_INTERFACE_PASSWORD != ''){
+	if (defined('YAPHOBIA_WEB_INTERFACE_PASSWORD') && constant('YAPHOBIA_WEB_INTERFACE_PASSWORD') != ''){
 		session_start();
 		//check if session is authenticated
 		if (!session_is_registered('AUTHENTICATED')){
@@ -106,7 +106,8 @@ $category_menu = array(
 	7 => 'Konfigurations-Check'
 );
 
-if (YAPHOBIA_WEB_INTERFACE_PASSWORD != ''){
+
+if (defined('YAPHOBIA_WEB_INTERFACE_PASSWORD') && constant('YAPHOBIA_WEB_INTERFACE_PASSWORD') != ''){
 	$category_menu[CATEGORY_LOGOUT] = 'Logout';
 }
 
@@ -131,14 +132,13 @@ if (defined('CLOSE_GATE')){
 	print(CLOSE_GATE . "<br/>");
 }
 else{
-	actions($cat);	
-}
-
-function actions($category){
-
 	$db = new dbMan();
 	$dbh = $db->getDBHandle();
-	
+	actions($cat, $dbh);	
+}
+
+function actions($category, $dbh){
+
 	//check if yaphobia database is empty. if it is empty, offer to create all tables
 	$query="SHOW TABLES";
 	$result = mysql_query( $query, $dbh );
@@ -318,7 +318,7 @@ function actions($category){
 		}
 
 		$tr = new trace('html');
-		$call_import = new callImportManager($db, $tr);
+		$call_import = new callImportManager($dbh, $tr);
 				
 		if ( $importType == 1){
 			print '<h2>Anrufliste aus Fritzbox importieren</h2>';
@@ -344,7 +344,7 @@ function actions($category){
 		$sermon = $ih->proofreadOptionalSettings();
 		print '<div class="welcome" style="text-align: left;"><h1>Checking optional configuration parameters</h1>' . $sermon . '</div>';
 	}
-	elseif ( $category == CATEGORY_LOGOUT && YAPHOBIA_WEB_INTERFACE_PASSWORD != "" ){
+	elseif ( $category == CATEGORY_LOGOUT && defined('YAPHOBIA_WEB_INTERFACE_PASSWORD') && constant('YAPHOBIA_WEB_INTERFACE_PASSWORD') != ''){
 		session_unregister('AUTHENTICATED'); //logout
 		session_unregister('MULTIPLE_LOGIN_ATTEMPT');
 		print '<div class="welcome"><h1>Logout successful.</h1>'.
