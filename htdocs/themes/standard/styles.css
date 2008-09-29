@@ -123,4 +123,25 @@
 			margin-left: auto;
 			text-align: left;
 			background-color: lightyellow;
+			border: 1px solid grey;
+			padding: 5px;
 		}
+		
+		pre.traceLevel0{
+			background-color: red;
+		}
+		pre.traceLevel1{
+			background-color: pink;
+		}
+		pre.traceLevel2{
+			background-color: orange;
+		}
+		pre.traceLevel3{
+			background-color: lightgreen;
+		}
+		pre.traceLevel4{
+			background-color: lightyellow;
+		}
+		pre.traceLevel5{
+			background-color: snow;
+		}				

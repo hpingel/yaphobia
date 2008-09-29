@@ -193,11 +193,14 @@ class curllib {
 		curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (X11; U; Linux x86_64; de; rv:1.9.0.1) Gecko/2008072820 Firefox/3.0.1");
 		//FIXME: Make user agent + proxy settings flexible
 		curl_setopt($ch, CURLOPT_HEADER, 0);
-		//FIXME: we don't want to disable CURLOPT_SSL_VERIFYPEER for security reasons!!!
-		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1 );
+		//for verification of ssl certificates we use the cacert.pem that
+		//is available from http://curl.haxx.se/docs/caextract.html
+		curl_setopt($ch, CURLOPT_CAINFO, PATH_TO_YAPHOBIA . "cacert/cacert.pem");
+		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, TRUE);
+		curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1 ); //don't print response directly
 		curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-		//curl_setopt($ch, CURLOPT_USERPWD, '[username]:[password]');		
+		//curl_setopt($ch, CURLOPT_USERPWD, '[username]:[password]'); not needed		
 		if ($this->binaryTransfer === true){
 			$this->tr->addToTrace(4, "Binary transfer is turned on.");
 			curl_setopt($ch, CURLOPT_BINARYTRANSFER, 1);
@@ -230,13 +233,17 @@ class curllib {
 			}
 			
 		}
-		$my_response = curl_exec($ch);
-		  
+		$response = curl_exec($ch);
+		
 		$this->tr->addToTrace(5, print_r(curl_getinfo ( $ch ), true) );
+
+		if ( curl_errno($ch) != 0) {
+	           $this->tr->addToTrace(1, "cURL error: number:" . curl_errno($ch) . " , message: " . curl_error($ch));
+		}		
 		
 		curl_close($ch);
 		
-		return $my_response;
+		return $response;
 	}
 
 	/*
