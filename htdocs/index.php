@@ -32,10 +32,14 @@ require_once( "../classes/class.installHelpers.php");
 //1) presence of settings file
 //2) correct authentication 
 //3) mandatory configuration constants
-define( 'PATH_TO_SETTINGS', str_replace("htdocs","",dirname(__FILE__)) . 'config/settings.php' ); 
+
+$authentication_enabled = false;
+
+define( 'PATH_TO_SETTINGS', str_replace("htdocs","",dirname(__FILE__)) . 'config/settings.php' );
 if (file_exists(PATH_TO_SETTINGS)){
-	require_once(PATH_TO_SETTINGS);	
-	if (defined('YAPHOBIA_WEB_INTERFACE_PASSWORD') && constant('YAPHOBIA_WEB_INTERFACE_PASSWORD') != ''){
+	require_once(PATH_TO_SETTINGS);
+	define('AUTHENTICATION_ENABLED',defined('YAPHOBIA_WEB_INTERFACE_PASSWORD') && (constant('YAPHOBIA_WEB_INTERFACE_PASSWORD') != ""));
+	if ( AUTHENTICATION_ENABLED ){
 		session_start();
 		//check if session is authenticated
 		if (!session_is_registered('AUTHENTICATED')){
@@ -107,7 +111,7 @@ $category_menu = array(
 );
 
 
-if (defined('YAPHOBIA_WEB_INTERFACE_PASSWORD') && constant('YAPHOBIA_WEB_INTERFACE_PASSWORD') != ''){
+if ( AUTHENTICATION_ENABLED ){
 	$category_menu[CATEGORY_LOGOUT] = 'Logout';
 }
 
@@ -115,7 +119,7 @@ $cat = isset($_REQUEST["category"]) ? intval($_REQUEST["category"]) : 1;
 
 print '<div class="yaph_header"><h1>Yaphobia</h1>';
 
-if (!defined('CLOSE_GATE') && $cat != CATEGORY_LOGOUT){
+if (!defined('CLOSE_GATE') && ($cat != CATEGORY_LOGOUT) || !AUTHENTICATION_ENABLED ) {
 	
 	print '<p class="category_menu">';
 	foreach ($category_menu as $id=>$desc){
@@ -344,7 +348,7 @@ function actions($category, $dbh){
 		$sermon = $ih->proofreadOptionalSettings();
 		print '<div class="welcome" style="text-align: left;"><h1>Checking optional configuration parameters</h1>' . $sermon . '</div>';
 	}
-	elseif ( $category == CATEGORY_LOGOUT && defined('YAPHOBIA_WEB_INTERFACE_PASSWORD') && constant('YAPHOBIA_WEB_INTERFACE_PASSWORD') != ''){
+	elseif ( $category == CATEGORY_LOGOUT && AUTHENTICATION_ENABLED){
 		session_unregister('AUTHENTICATED'); //logout
 		session_unregister('MULTIPLE_LOGIN_ATTEMPT');
 		print '<div class="welcome"><h1>Logout successful.</h1>'.
