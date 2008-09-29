@@ -33,8 +33,6 @@ require_once( "../classes/class.installHelpers.php");
 //2) correct authentication 
 //3) mandatory configuration constants
 
-$authentication_enabled = false;
-
 define( 'PATH_TO_SETTINGS', str_replace("htdocs","",dirname(__FILE__)) . 'config/settings.php' );
 if (file_exists(PATH_TO_SETTINGS)){
 	require_once(PATH_TO_SETTINGS);
