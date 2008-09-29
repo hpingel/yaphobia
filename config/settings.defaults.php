@@ -40,6 +40,10 @@
 	/*
 	 * global settings
 	 */
+
+	//if you want to password protect the web interface of Yaphobia, please put in your password here
+	define( 'YAPHOBIA_WEB_INTERFACE_PASSWORD', '');
+	
 	
 	define( 'PATH_TO_YAPHOBIA', str_replace("config","",dirname(__FILE__))  );
 		

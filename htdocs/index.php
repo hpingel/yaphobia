@@ -26,6 +26,45 @@ require_once( "../classes/class.trace.php");
 require_once( "../classes/class.db_manager.php");
 require_once( "../classes/class.callImportManager.php");
 
+//check for show stoppers:
+//1) presence of settings file
+//2) correct authentication 
+define( 'PATH_TO_SETTINGS', str_replace("htdocs","",dirname(__FILE__)) . 'config/settings.php' ); 
+if (file_exists(PATH_TO_SETTINGS)){
+	require_once(PATH_TO_SETTINGS);	
+	if (YAPHOBIA_WEB_INTERFACE_PASSWORD != ''){
+		session_start();
+		//check if session is authenticated
+		if (!session_is_registered('AUTHENTICATED')){
+			//check password
+			if (isset($_POST['PW']) && $_POST['PW'] == YAPHOBIA_WEB_INTERFACE_PASSWORD ){
+				session_register('AUTHENTICATED');
+			}
+			else{
+				if (!session_is_registered('MULTIPLE_LOGIN_ATTEMPT')){
+					session_register('MULTIPLE_LOGIN_ATTEMPT');
+					$message = "Welcome! Please enter your password.";
+				}
+				else{
+					//session_unregister('FIRST_LOGIN_ATTEMPT');
+					$message = "Wrong password!";
+				}
+				define('CLOSE_GATE', 
+					'<div class="welcome"><h1>'.$message.'</h1>'.
+					'<form method="post" action="index.php">Please enter your password: '.
+					'<input type="password" name="PW" value="" />'.
+					'<input type="submit" value="OK"/>'.
+					'</form></div>'
+				);
+			}
+		}
+	}
+}
+else{
+	define('CLOSE_GATE', '<div class="welcome"><p>ERROR: There is no configuration file <b>settings.php</b>!<br/>Please copy <b>settings.defaults.php</b> to <b>settings.php</b> and change the options within the file according to your needs.</p></div>');
+}
+
+
 //header("Content-type: text/xml"); //disabled until we solved some problems
 print '<?xml version="1.0" encoding="utf-8"?>';
 
@@ -48,38 +87,46 @@ define(CR,"\n");
 
 <?php
 
+define('CATEGORY_LOGOUT', 100);
+
 $category_menu = array(
 	1 => 'Monatsrechnungen',
 	2 => 'Tarifcheck',
 	3 => 'Buchungscheck',
 	4 => 'Jahres&uuml;berblick',
 	5 => 'Weitere Statistiken',
-	6 => 'Datenimport'
+	6 => 'Datenimport',
 );
+
+if (YAPHOBIA_WEB_INTERFACE_PASSWORD != ''){
+	$category_menu[CATEGORY_LOGOUT] = 'Logout';
+}
+
 
 
 $cat = isset($_REQUEST["category"]) ? intval($_REQUEST["category"]) : 0;
 
 print '<div class="yaph_header"><h1>Yaphobia</h1>';
-print '<p class="category_menu">';
-foreach ($category_menu as $id=>$desc){
-	$class= ($id == $cat)? ' class="active"' : '';
-	print '<a'.$class.' href="?category='.$id.'">'.$desc.'</a> ';
+
+if (!defined('CLOSE_GATE') && $cat != CATEGORY_LOGOUT){
+	
+	print '<p class="category_menu">';
+	foreach ($category_menu as $id=>$desc){
+		$class= ($id == $cat)? ' class="active"' : '';
+		print '<a'.$class.' href="?category='.$id.'">'.$desc.'</a> ';
+	}
+	print "</p>";
 }
-print "</p></div><br/>";
 
-//check for settings file
+print "</div><br/>";
 
-define( 'PATH_TO_SETTINGS', str_replace("htdocs","",dirname(__FILE__)) . 'config/settings.php' ); 
-if (file_exists(PATH_TO_SETTINGS)){
-	require_once(PATH_TO_SETTINGS);	
+//output unsuccessful check for settings file
+if (defined('CLOSE_GATE')){
+	print(CLOSE_GATE . "<br/>");
 }
 else{
-	die('<div class="welcome"><p>ERROR: There is no configuration file <b>settings.php</b>!<br/>Please copy <b>settings.defaults.php</b> to <b>settings.php</b> and change the options within the file according to your needs.</p></div>');
+	actions($cat);	
 }
-
-
-actions($cat);
 
 function actions($category){
 
@@ -284,6 +331,12 @@ function actions($category){
 			print "<pre>" . htmlspecialchars( $call_import->getTrace() ) . "</pre>";
 			
 		}
+	}
+	elseif($category == CATEGORY_LOGOUT && YAPHOBIA_WEB_INTERFACE_PASSWORD != ""){
+		session_unregister('AUTHENTICATED'); //logout
+		session_unregister('MULTIPLE_LOGIN_ATTEMPT');
+		print '<div class="welcome"><h1>Logout successful.</h1>'.
+			'<p><a href="index.php">Login again</a></p></div>';
 	}
 }
 

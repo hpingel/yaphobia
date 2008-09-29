@@ -23,9 +23,9 @@
 */
 
 		div.yaph_header{
-			background-color: lightgrey;
-			border: 1px dotted blue;
+			background-color: lightblue;
 			padding: 5px;
+			color: navy;
 		}
 		
 		body{
