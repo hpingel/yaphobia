@@ -129,7 +129,7 @@ if (!defined('CLOSE_GATE') && ($cat != CATEGORY_LOGOUT) || !AUTHENTICATION_ENABL
 
 print "</div><br/>";
 
-//output unsuccessful check for settings file
+//stop here if a showstopper has occured above
 if (defined('CLOSE_GATE')){
 	print(CLOSE_GATE . "<br/>");
 }
@@ -141,6 +141,11 @@ else{
 
 function actions($category, $dbh){
 
+	//set config values to default values in case they are undefined
+	//also collect protocol information about this in $sermonOptionalSettings  
+	$ih = new installHelpers();
+	$sermonOptionalSettings = $ih->proofreadOptionalSettings();
+	
 	//check if yaphobia database is empty. if it is empty, offer to create all tables
 	$query="SHOW TABLES";
 	$result = mysql_query( $query, $dbh );
@@ -342,9 +347,7 @@ function actions($category, $dbh){
 	}
 	elseif ( $category == 7 ){
 		print "<p>This check can help you to find problems in your setup</p>";
-		$ih = new installHelpers();
-		$sermon = $ih->proofreadOptionalSettings();
-		print '<div class="welcome" style="text-align: left;"><h1>Checking optional configuration parameters</h1>' . $sermon . '</div>';
+		print '<div class="welcome" style="text-align: left;"><h1>Checking optional configuration parameters</h1>' . $sermonOptionalSettings . '</div>';
 	}
 	elseif ( $category == CATEGORY_LOGOUT && AUTHENTICATION_ENABLED){
 		session_unregister('AUTHENTICATED'); //logout
