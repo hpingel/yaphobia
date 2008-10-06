@@ -135,11 +135,12 @@ class installHelpers{
 	public function proofreadOptionalSettings(){
 		$sermon = "";
 
+		$pathToYaphobia = str_replace("classes","",dirname(__FILE__));
 		$optional_constants = array(
 			'TRACE_LEVEL' => 2, //0-5
-			'PATH_TO_YAPHOBIA' => str_replace("classes","",dirname(__FILE__)),
-			'YAPHOBIA_COOKIEJAR_DIR'  => PATH_TO_YAPHOBIA. 'cookiejar/',
-			'YAPHOBIA_DATA_EXPORT_DIR' => PATH_TO_YAPHOBIA. 'data_export/',
+			'PATH_TO_YAPHOBIA' => $pathToYaphobia,
+			'YAPHOBIA_COOKIEJAR_DIR'  => $pathToYaphobia. 'cookiejar/',
+			'YAPHOBIA_DATA_EXPORT_DIR' => $pathToYaphobia. 'data_export/',
 			'YAPHOBIA_WEB_INTERFACE_PASSWORD' => "", //authentication is disabled
 		
 			'FRITZBOX_HOSTNAME' => 'fritz.box',
