@@ -142,7 +142,7 @@ class installHelpers{
 			'YAPHOBIA_DATA_EXPORT_DIR' => PATH_TO_YAPHOBIA. 'data_export/',
 			'YAPHOBIA_WEB_INTERFACE_PASSWORD' => "", //authentication is disabled
 		
-			'FRITZBOX_HOSTNAME' => 'fritz!box',
+			'FRITZBOX_HOSTNAME' => 'fritz.box',
 			'FRITZBOX_PASSWORD' => '',
 			'FRITZBOX_SAVE_CALLER_PROTOCOL_TO_EXPORT_DIR' => false,
 		
