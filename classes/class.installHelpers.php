@@ -119,14 +119,14 @@ class installHelpers{
 		}
 		
 		if (count($sermon_items) > 0){
-			$sermon .= "<p>Mandatory constants are missing in your configuration. Please add them to /config/settings.php:</p>\n<ul>";
+			$sermon .= "<p>Mandatory constants are missing in your configuration. Please add them to /config/settings.php:</p>\n<ul>\n";
 			foreach ($sermon_items as $item){
-				$sermon .= "<li>".$item."</li>";		
+				$sermon .= "<li>".$item."</li>\n";		
 			}
-			$sermon .= "</ul>";
+			$sermon .= "</ul>\n";
 		}
 		if ($sermon != ""){
-			$sermon = "<h1>Please check your Yaphobia configuration settings</h1><p>All configuration settings are managed in <b>/config/settings.php</b></p>" . $sermon;
+			$sermon = "<h1>Please check your Yaphobia configuration settings</h1>\n<p>All configuration settings are managed in <b>/config/settings.php</b></p>" . $sermon;
 		}
 		
 		return $sermon;		
@@ -182,12 +182,11 @@ class installHelpers{
 		}
 
 		if (count($sermon_items) > 0){
-			$sermon .= "<p>To change the situation, please adjust the content of <b>/config/settings.php</b></p><ul>";
+			$sermon .= "<p>To change the situation, please adjust the content of <b>/config/settings.php</b></p><ul>\n";
 			foreach ($sermon_items as $item){
-				$sermon .= "<li>".$item."</li>";		
+				$sermon .= "<li>".$item."</li>\n";		
 			}
-			$sermon .= "</ul>";
-
+			$sermon .= "</ul>\n";
 		}
 		
 		return $sermon;

@@ -92,12 +92,14 @@
 			text-align: center;
 		}
 
-
-
 		a.date_nav,
 		span.date_nav_active{
 			font-size: 14px;
 			text-decoration: none;
+		}
+
+		span.date_nav_active{
+			font-weight: bold;
 		}
 
 		div.content_wrap{

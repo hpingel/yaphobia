@@ -35,10 +35,22 @@ class dbMan {
 	function __construct(){
 		$this->db = @mysql_connect( YAPHOBIA_DB_HOST, YAPHOBIA_DB_USER, YAPHOBIA_DB_PASSWORD );
 		if (mysql_errno() != 0){
-			die('<div class="welcome"><h2>Couldn\'t connect to database!</h2>Error message:<br/><b>'. mysql_error().'</b>.<br/>Please check your database parameters in config/settings.php.</div>');
+			die(
+				'<div class="welcome">'."\n".
+				'<h2>Couldn\'t connect to database!</h2>'."\n".
+				'<p>Error message:<br/><b>'. mysql_error().'</b>.<br/>'."\n".
+				'Please check your database parameters in config/settings.php.</p>'."\n".
+				'</div>'."\n"
+			);
 		}
 		if ( mysql_select_db( YAPHOBIA_DB_NAME , $this->db ) === false){
-			die('<div class="welcome"><h2>Problem on accessing database "'.YAPHOBIA_DB_NAME.'".<br/></h2>Error on database selection attempt:<br/><b>'. mysql_error().'</b>.<br/>Please check your database parameters in config/settings.php.</div>');
+			die(
+				'<div class="welcome">'.
+				'<h2>Problem on accessing database "'.YAPHOBIA_DB_NAME.'".<br/></h2>'."\n".
+				'<p>Error on database selection attempt:<br/><b>'. mysql_error().'</b>.<br/>'."\n".
+				'Please check your database parameters in config/settings.php.</p>'."\n".
+				'</div>'."\n"
+			);
 		}
 	}
 

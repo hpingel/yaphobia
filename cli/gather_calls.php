@@ -39,6 +39,7 @@ else{
 require_once( PATH_TO_YAPHOBIA. "classes/class.trace.php");
 require_once( PATH_TO_YAPHOBIA. "classes/class.db_manager.php");
 require_once( PATH_TO_YAPHOBIA. "classes/class.callImportManager.php");
+require_once( PATH_TO_YAPHOBIA. "classes/class.installHelpers.php");
 
 print "==================================================\n";
 print " Welcome to Yaphobia!\n";
@@ -49,6 +50,15 @@ print " gather_calls.php is an example script to show how\n";
 print " call data is imported into Yaphobia's database\n";
 print " automatically.\n";
 print "==================================================\n";
+
+//check mandatory settings + add default settings for optional settings
+//FIXME: this should be part of a new cli environment class
+$ih = new installHelpers();
+$sermon = $ih->proofreadMandatorySettings();
+print $sermon;
+$sermonOptionalSettings = $ih->proofreadOptionalSettings();
+//print $sermonOptionalSettings;
+
 
 $db = new dbMan();
 $dbh = $db->getDBHandle();
