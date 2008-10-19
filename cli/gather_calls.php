@@ -66,9 +66,6 @@ $traceObj = new trace('text');
 $call_import = new callImportManager($dbh, $traceObj);
 $call_import->getFritzBoxCallerList();
 
-if (AUTOBILL_REMAINING_FLATRATE_CALLS)
-	$call_import->markFlateRateCallsAsBilled('0', 'Flatrate Festnetz');
-
 if (DUSNET_ACTIVE){ 
 	$dusnet_callist = $call_import->getDusNetCalls( DUSNET_SIPACCOUNT, DUSNET_USERNAME, DUSNET_PASSWORD );
 	$call_import->putDusNetCallArrayIntoDB($dusnet_callist, DUSNET_PROVIDER_ID);

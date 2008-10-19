@@ -356,14 +356,11 @@ function actions($category, $dbh){
 			print '<h2>EVN des aktuellen Monats von sipgate importieren</h2>';
 			$sg_callist = $call_import->getSipgateCallsOfCurrentMonth( SIPGATE_USERNAME, SIPGATE_PASSWORD);
 			$call_import->putSipgateCallArrayIntoDB($sg_callist, SIPGATE_PROVIDER_ID);
-			print "<pre>" . htmlspecialchars( $call_import->getTrace() ) . "</pre>";
-					}
+		}
 		elseif ( $importType == 3 && DUSNET_ACTIVE){
 			print '<h2>EVN des aktuellen Monats von dus.net importieren</h2>';
 			$dusnet_callist = $call_import->getDusNetCalls( DUSNET_SIPACCOUNT, DUSNET_USERNAME, DUSNET_PASSWORD );
 			$call_import->putDusNetCallArrayIntoDB($dusnet_callist, DUSNET_PROVIDER_ID);
-			print "<pre>" . htmlspecialchars( $call_import->getTrace() ) . "</pre>";
-			
 		}
 		break;
 		
