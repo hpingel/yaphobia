@@ -35,7 +35,6 @@ class callImportManager{
 	
 	var $dbh,
 		$tr,
-		$trace,
 		$currentMonth,
 		$currentYear;
 		
@@ -45,14 +44,8 @@ class callImportManager{
 	function __construct($dbh, $traceObj){
 		$this->tr = $traceObj;
 		$this->dbh = $dbh;
-		$this->dusnet_trace = "";
-		$this->trace = "";
 		$this->currentMonth = date('m', time());
 		$this->currentYear = date('Y', time());
-	}
-	
-	public function getTrace(){
-		return $this->trace;
 	}
 	
 	/*
@@ -62,10 +55,12 @@ class callImportManager{
 		
 		$p->logon($username , $password);
 		$p->getEvnOfMonth( $this->currentYear, $this->currentMonth );
+		$p->determineCredit();
 		$p->logout();
 		$calllist = $p->getCallerListArray();
+		$credit = $p->getCredit();
+		$this->tr->addToTrace(2, "Credit: " . $credit);
 		if ($csv_file_flag) $p->createCsvFile();
-		$this->trace = $p->getTraceString() . "\n";
 		return $calllist;
 	}
 
@@ -82,7 +77,7 @@ class callImportManager{
 	 */
 	public function putDusNetCallArrayIntoDB($calllist, $providerId){		
 		foreach ($calllist as $call){
-			$this->trace .= $this->checkCallUniqueness( array(
+			$result = $this->checkCallUniqueness( array(
 				'providerid'      => $providerId,
 				'number'          => $call["Nummer"],
 				'date'            => $call["Datum"],
@@ -91,6 +86,8 @@ class callImportManager{
 				'billed_cost'     => $call["Kosten"]
 			));
 		}
+		//searches through database to see if there are new call rates to add to the list
+		$this->checkForNewRateTypes();
 	}
 	
 	/*
@@ -119,12 +116,10 @@ class callImportManager{
 				$duration = intval($dur_fragments[0]) * 3600 + intval($dur_fragments[1]) * 60 + intval($dur_fragments[2]); 
 			}
 			else{
-				$this->trace .=  "ERROR: Strange duration $call[3]";
-				print $this->trace; //exception from the rule
-				die();
+				$this->tr->addToTrace(0, "ERROR: Strange duration $call[3]");
 			}
 			
-			$this->trace .= $this->checkCallUniqueness( array(
+			$result = $this->checkCallUniqueness( array(
 				'providerid' => $providerid,
 				'number' => $call[1],
 				'date' => $call[0],
@@ -133,8 +128,8 @@ class callImportManager{
 				'billed_cost' => $call[5]
 			));
 		}
-		
-		$this->trace .= "Done.\n";
+		//searches through database to see if there are new call rates to add to the list
+		$this->checkForNewRateTypes();
 	}
 	
 	/*
@@ -146,7 +141,6 @@ class callImportManager{
 		$fb->logon( FRITZBOX_PASSWORD ); 
 		$fb->loadCallerListFromBox();
 		$fb->logout(); //dummy
-		$trace = "";
 		$calllist = $fb->getCallerListArray();
 		foreach ($calllist as $call){
 			//date, identity, phonenumber, calltype, usedphone, providerstring, provider_id, estimated_duration
@@ -174,14 +168,18 @@ class callImportManager{
 			}
 			
 			$insertstring = "'$date','$call[2]','$call[3]','$call[0]','$call[4]','$call[5]','$providerid','$duration'";
-			//print "$insertstring\n";
-			$trace .= $this->insertMonitoredCall( $insertstring );
+			$this->tr->addToTrace( 5, $insertstring);
+			$this->insertMonitoredCall( $insertstring );
 		}
 		
 		if (FRITZBOX_SAVE_CALLER_PROTOCOL_TO_EXPORT_DIR){
-			$trace .= $fb->createFileInExportDir( YAPHOBIA_DATA_EXPORT_DIR."FRITZ_Box_Anrufliste.csv", $fb->getCallerListString());
+			$fb->createFileInExportDir( YAPHOBIA_DATA_EXPORT_DIR."FRITZ_Box_Anrufliste.csv", $fb->getCallerListString());
 		}
-		return $fb->getTraceString() . $trace;
+
+		if (AUTOBILL_REMAINING_FLATRATE_CALLS)
+			$this->markFlateRateCallsAsBilled('0', 'Flatrate Festnetz');
+		
+		$this->recheckUnmatchedCalls();
 	}
 
 	
@@ -190,33 +188,98 @@ class callImportManager{
 	 * if the call already is in the database table, it will not be added another time
 	 */
 	private function insertMonitoredCall( $values ){
-		$trace = "";
 		$query = "INSERT INTO callprotocol (date, identity, phonenumber, calltype, usedphone, providerstring, provider_id, estimated_duration)".
 		$query .= " VALUES (" . $values . ")";
-		$trace .= "Checking presence of call: $values\n";
+		$this->tr->addToTrace( 3,"Checking presence of call: $values");
 		
 		$result = mysql_query($query,$this->dbh);
 		if (!$result) {
 			if (mysql_errno() == 1062){
-				$trace .= "Duplicate call was skipped! Is already in database.\n";
+				$this->tr->addToTrace( 3,"Duplicate call was skipped! Is already in database.");
 			}
 			else
-	    		$trace .= 'Invalid query: ' . mysql_errno() . ") ". mysql_error() . "\n";
+	    		$this->tr->addToTrace( 1,'Invalid query: ' . mysql_errno() . ") ". mysql_error()); 
 		}
 		else{
-			$trace .= "Call added to database.\n";
+			$this->tr->addToTrace( 3,"Call added to database.");
 		}
-		return $trace;
 	}
 	
+	/*
+	 * check all entries of database table unmatched_calls if we can now find matching entries
+	 * in table call_protocoll
+	 */
+	public function recheckUnmatchedCalls(){
+		$query = "SELECT * FROM unmatched_calls";
+		$result = mysql_query($query, $this->dbh);
+		while ($row = mysql_fetch_assoc($result)) {
+			$call_array = array(
+				'providerid' => $row['provider_id'],
+				'number' => $row['phonenumber'],
+				'date' => $row['date'],
+				'duration' => $row['billed_duration'],
+				'rate_description'=> $row['rate_type'],
+				'billed_cost' => $row['billed_cost']
+			);
+			$success = $this->checkCallUniqueness( $call_array );
+			//$this->tr->addToTrace(3, "value of success is: '$success' " . ($success == true));
+			if ($success == true){
+				//delete row
+				$query = "DELETE FROM unmatched_calls WHERE ";
+				foreach ($row as $key => $value){
+					$query .= $key . " = '" . $value . "' AND "; 
+				}
+				$query = substr($query, 0, strlen($query) - 4); 
+				$this->tr->addToTrace(4, $query);
+				$delete_result = mysql_query($query, $this->dbh);
+				if (!$delete_result) {
+			    	$this->tr->addToTrace( 1,'Invalid query: ' . mysql_error() );
+				}
+				else{
+					$this->tr->addToTrace( 3,'Row from unmatched_calls was successfully deleted.');
+				}
+				
+			}
+			else{
+				$this->tr->addToTrace( 3,'Matching call was not found. Maybe here we have a problem with billed status!!!');
+			}
+		}
+	}
 	
+	/*
+	 * tries to buffer a call from a call provider that couldn't be matched to an existing call from the protocol
+	 * store it in db table unmatched_call
+	 * if the call already is in the database table, it will not be added another time
+	 */
+	private function insertUnmatchedCall( $values ){
+		$query = "INSERT INTO unmatched_calls (provider_id, date, phonenumber, billed_duration, billed_cost, rate_type)".
+		$query .= " VALUES (" . $values . ")";
+		$this->tr->addToTrace(4, "Checking presence of unmatched call: $values");
+					
+		$result = mysql_query($query,$this->dbh);
+		if (!$result) {
+			if (mysql_errno() == 1062){
+				$this->tr->addToTrace(4, "Duplicate unmatched call was skipped! Is already in database.");
+				$success = true;
+			}
+			else
+	    		$this->tr->addToTrace(1, 'Invalid query: ' . mysql_errno() . ") ". mysql_error());
+				$success = false;
+		}
+		else{
+			$this->tr->addToTrace(4,"Unmatched call added to database.");
+			$success = true;
+		}
+		return $success;
+	}
+		
 	/*
 	 * check if we can find a matching call from the call protocol for a call from a phone bill
 	 * if this is possible (single call is found) we update the call protocol entry with the 
 	 * billing information 
 	 */
-	function checkCallUniqueness($x){
-		$trace = "";
+	private function checkCallUniqueness($x){
+		$success = false;
 		$tolerance_span_call_begin = TOLERANCE_CALL_BEGIN; //in seconds
 		$tolerance_span_duration = TOLERANCE_CALL_DURATION; //in seconds
 		
@@ -225,13 +288,16 @@ class callImportManager{
 			$x[$key] = mysql_real_escape_string( $value);
 		}
 		
+		//reformat cost value
+		$x['billed_cost'] = floatval(str_replace(',','.',$x['billed_cost']));
+		
 		$update= 
 			"billed = '1', ".
 			"dateoffset = TIMESTAMPDIFF(SECOND, date,'".$x['date']."'), ".
 			"rate_type = '".$x['rate_description']."', ".
 			"rate_type_id = '0', ".
 			"billed_duration = '".$x['duration']."', ".
-			"billed_cost = '". floatval(str_replace(',','.',$x['billed_cost']))."'";
+			"billed_cost = '". $x['billed_cost'] ."'";
 		
 		$where = 
 			"phonenumber = '".$x['number']."' AND ".
@@ -244,31 +310,42 @@ class callImportManager{
 		$result = mysql_query( $query, $this->dbh );
 		$matches = mysql_num_rows($result);
 		if ($matches > 1){
-			$trace .= "ERROR: Not able to match following call in protocol:\n";
-			$trace .= print_r($x, true);
-			$trace .= "See possible matches here:\n";
+			$this->tr->addToTrace( 2, 
+				"Not able to match following call in protocol:" . 
+				print_r($x, true).
+				"See possible matches here:\n"
+			);
 			while ($row = mysql_fetch_assoc($result)) {
-			    $trace .= print_r($row, true);
+			    $this->tr->addToTrace( 2, print_r($row, true));
 			}		
 		}
 		elseif ($matches == 0){
-			$trace .= "ERROR: No match in call protocol for following call:\n";
-			$trace .= print_r ($x, true);
+			$this->tr->addToTrace( 2, "No match in call protocol for following call:\n" . print_r ($x, true));
+			//provider_id, date, phonenumber, billed_duration, billed_cost, rate_type
+			$unmatchedCallString = 
+				"'" . 
+				$x['providerid'] . "','" . 
+				$x['date'] . "','" .
+				$x['number'] . "','" .
+				$x['duration'] . "','" .
+				$x['billed_cost'] . "','" .
+				$x['rate_description'] . "'"; 
+			$this->insertUnmatchedCall ($unmatchedCallString);
 		}
 		else{
 			$row = mysql_fetch_assoc($result);
+			$success = true;
 			if ($row['billed'] != '1'){
-				$trace .=  "Call (". $x["date"] . " ". $x["number"] . "): Found, updating call info.\n";
+				$this->tr->addToTrace( 3, "Call (". $x["date"] . " ". $x["number"] . "): Found, updating call info.");
 				$query = "UPDATE callprotocol SET $update $whereStart $where";
-				//$trace .= "Query: $query\n";
+				$this->tr->addToTrace( 5, "Query: $query\n");
 				$result = mysql_query( $query, $this->dbh );
 			}
 			else{
-				$trace .= "Call (". $x["date"] . " ". $x["number"] . "): Already billed. Skipped.\n";
+				$this->tr->addToTrace( 3, "Call (". $x["date"] . " ". $x["number"] . "): Already billed. Skipped.");
 			}
-			
 		}
-		return $trace;
+		return $success;
 	}
 	
 	
@@ -276,21 +353,20 @@ class callImportManager{
 	 * checkForNewRateTypes
 	 */
 	public function checkForNewRateTypes(){
-		print "==================================================\n";		
-		print "check for new rate types in fritz!box call protocol\n";
-		print "==================================================\n";
+		$this->tr->addToTrace( 3,"check for new rate types in fritz!box call protocol");
+		
 		$result = mysql_query("SELECT provider_id, rate_type FROM callprotocol GROUP BY (rate_type)",$this->dbh);
 		while ($row = mysql_fetch_assoc($result)) {
 			$result2 = mysql_query("INSERT INTO provider_rate_types (provider_id, rate_type) VALUES ('". $row["provider_id"] ."','". $row["rate_type"] ."')", $this->dbh);
 			if (!$result2) {
 				if (mysql_errno() == 1062){
-					print "Duplicate rate was skipped! Is already in database.\n";
+					$this->tr->addToTrace( 3,"Duplicate rate was skipped! Is already in database.");
 				}
 				else
-			    	print 'Invalid query: ' . mysql_error() . "\n";
+			    	$this->tr->addToTrace( 1,'Invalid query: ' . mysql_error() );
 			}
 			else{
-				print "Rate added to database.\n";
+				$this->tr->addToTrace( 3, "Rate added to database.");
 			}
 		}
 	}
@@ -302,9 +378,9 @@ class callImportManager{
 	 * todo: at the moment this function is not aware of non-festnetz-phonenumbers which would not belong to the flatrate
 	 */
 	public function markFlateRateCallsAsBilled($provider_id, $rate_type){
-		$trace  = "==================================================\n";
-		$trace .= "Marking FlateRate calls as billed\n";
-		$trace .= "==================================================\n";
+		
+		$this->tr->addToTrace( 3,"Marking FlateRate calls as billed");
+		
 		$query="UPDATE callprotocol SET ".
 				"billed_cost = 0, ".
 				"billed = 2, ". // 2 means that it was done without an evn
@@ -318,15 +394,14 @@ class callImportManager{
 				"ISNULL(billed_duration) AND ".
 				"ISNULL(billed_cost) AND ".
 				"ISNULL(dateoffset)";
-		//$trace .= $query . "\n";
+		$this->tr->addToTrace( 5,$query);
 		$result = mysql_query($query,$this->dbh);
 		if (!$result) {
-    		$trace .= 'Invalid query: ' . mysql_errno() . ") ". mysql_error() . "\n";
+    		$this->tr->addToTrace( 1, 'Invalid query: ' . mysql_errno() . ") ". mysql_error() );
 		}
 		else{
-			$trace .= "Unbilled flatrate calls have been auto-billed.\n";
+			$this->tr->addToTrace( 3, "Unbilled flatrate calls have been auto-billed.");
 		}
-		return $trace;
 	}
 }
 

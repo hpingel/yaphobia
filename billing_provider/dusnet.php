@@ -34,6 +34,7 @@ final class dusnetRemote extends billingProviderPrototype{
 	function __construct($sipAccount, $traceObj){	
 		parent::__construct("dus.net", "https://my.dus.net/", $traceObj);
 		$this->handleSessionCookies();
+		$this->setCreditRegex('/<tr.*?><td><IMG.*?><\/td><td>.*?<\/td><td>(.*?EUR.*?)<\/td><\/tr>/');
 		$this->describeStandardRequests(
 			array(
 				FR_TASK_LOGON => array(
@@ -59,6 +60,10 @@ final class dusnetRemote extends billingProviderPrototype{
 						FR_POSTVARS => "startday=01&startmonth=[[MONTH]]&startyear=[[YEAR]]&endday=31&endmonth=[[MONTH]]&endyear=[[YEAR]]&sip=$sipAccount&archiv=Archiv",
 						FR_PATH     => "voip_access/evn.php"
 					)
+				),
+				FR_TASK_GETCREDIT => array(
+					FR_TYPE     => FR_TYPE_GET,
+					FR_PATH     => "xp/index.php"
 				)
 			)
 		);		

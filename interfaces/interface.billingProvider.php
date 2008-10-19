@@ -36,6 +36,7 @@ interface billingProvider{
 	public function getCallerListArray();
 	public function getCsvData();
 	public function createCsvFile();
+	public function getCredit();
 	
 }
 

@@ -64,10 +64,10 @@ $db = new dbMan();
 $dbh = $db->getDBHandle();
 $traceObj = new trace('text');
 $call_import = new callImportManager($dbh, $traceObj);
-print $call_import->getFritzBoxCallerList();
+$call_import->getFritzBoxCallerList();
 
 if (AUTOBILL_REMAINING_FLATRATE_CALLS)
-	print $call_import->markFlateRateCallsAsBilled('0', 'Flatrate Festnetz');
+	$call_import->markFlateRateCallsAsBilled('0', 'Flatrate Festnetz');
 
 if (DUSNET_ACTIVE){ 
 	$dusnet_callist = $call_import->getDusNetCalls( DUSNET_SIPACCOUNT, DUSNET_USERNAME, DUSNET_PASSWORD );
@@ -78,12 +78,6 @@ if (SIPGATE_ACTIVE){
 	$sg_callist = $call_import->getSipgateCallsOfCurrentMonth( SIPGATE_USERNAME, SIPGATE_PASSWORD);
 	$call_import->putSipgateCallArrayIntoDB($sg_callist, SIPGATE_PROVIDER_ID);
 }
-
-print $call_import->getTrace();
-
-
-//searches through database to see if there are new call rates to add to the list
-$call_import->checkForNewRateTypes();
 	
 print "==================================================\n";
 print "= End of script                                  =\n";

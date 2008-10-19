@@ -42,7 +42,6 @@ class curllib {
 		$cookieJarPath = "",
 		$cookieJarInitialized = false,
 		$binaryTransfer = false,
-		$trace = "",
 		$tr;
 		
 	function __construct ($tr){
@@ -53,7 +52,6 @@ class curllib {
 		$this->cookieJarPath = "";
 		$this->cookieJarInitialized = false;
 		$this->binaryTransfer = false;
-		$this->trace = "";
 		$this->tr = $tr;
 		
 		//FIXME: use get_loaded_extensions instead to check if curl is enabled
@@ -67,15 +65,7 @@ class curllib {
 			$this->deleteCookieJarFile();
 		}
 	}
-	
-	public function getTraceString (){
-		return $this->trace;
-	}
 
-	public function resetTraceString (){
-		$this->trace = "";
-	}
-	
 	public function enableCookieJar ( $path){
 		$this->cookieJarEnabled = true;
 		$this->cookieJarPath = $path;

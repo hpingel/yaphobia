@@ -95,7 +95,22 @@ class installHelpers{
 			  `valid_from` datetime NOT NULL,
 			  `valid_to` datetime NOT NULL,
 			  PRIMARY KEY  USING BTREE (`provider_id`,`rate_type`,`valid_from`,`valid_to`)
-			) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Lists rates to different locations including price'		";
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Lists rates to different locations including price'		
+		";
+		$result = mysql_query( $query, $this->dbh );
+		print "MySQL response: ". mysql_errno() . " " . mysql_error(). "\n";
+
+		$query="
+			CREATE TABLE  `unmatched_calls` (
+			  `provider_id` tinyint(4) NOT NULL,
+			  `date` datetime NOT NULL,
+			  `billed_duration` int(11) NOT NULL,
+			  `rate_type` varchar(50) NOT NULL,
+			  `billed_cost` float(8,4) NOT NULL,
+			  `phonenumber` varchar(50) NOT NULL,
+			  PRIMARY KEY  USING BTREE (`provider_id`,`date`,`billed_duration`,`rate_type`,`billed_cost`,`phonenumber`)
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8
+		";
 		$result = mysql_query( $query, $this->dbh );
 		print "MySQL response: ". mysql_errno() . " " . mysql_error(). "\n";
 		

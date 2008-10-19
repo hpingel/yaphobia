@@ -34,6 +34,7 @@ final class sipgateRemote extends billingProviderPrototype{
 	function __construct( $traceObj ){
 		parent::__construct("sipgate", "https://secure.sipgate.de/user/", $traceObj);
 		$this->handleSessionCookies();
+		$this->setCreditRegex("/<td.*?>(.*?).&euro;<\/td>/");
 		$this->describeStandardRequests(
 			array(
 				FR_TASK_LOGON => array(
@@ -59,6 +60,10 @@ final class sipgateRemote extends billingProviderPrototype{
 						FR_TYPE    => FR_TYPE_BINARY,
 						FR_PATH    => "download_evn.php"
 					)
+				),
+				FR_TASK_GETCREDIT => array(
+					FR_TYPE     => FR_TYPE_GET,
+					FR_PATH     => "start.php"
 				)
 			)
 		);

@@ -157,7 +157,15 @@ function actions($category, $dbh){
 		print "</pre>";
 		$category = 0;
 	}
-
+	elseif (mysql_num_rows($result) < 4){ //FIXME: improve this value with constant or something...
+		print '<div class="welcome"><h2>Welcome!</h2><p>It seems that your MySQL database is missing some tables.<br/> '.
+			'Needed database tables will be created in the database now...</p><pre></div>';
+		$ih = new installHelpers();
+		$ih->createDBTables($dbh);	
+		print "</pre>";
+		$category = 0;
+	}
+	
 	//check if yaphobia callprotocol table is empty
 	$query="SELECT COUNT(*) as calls FROM callprotocol";
 	$result = mysql_query( $query, $dbh );
@@ -175,12 +183,15 @@ function actions($category, $dbh){
 
 	$year = '2008';
 	
-	if ($category == 1){
+	switch ($category){
+		
+	case 1:
 		$month = intval($_REQUEST["m"]);
 		$year = intval($_REQUEST["y"]);
 		getMonthlyReport($month,$year, false, $dbh);
-	}
-	elseif ($category == 2){
+		break;
+		
+	case 2:
 		$query="SELECT pd.provider_name, prt.rate_type, concat( prt.price_per_minute, ' EUR') FROM provider_rate_types prt LEFT JOIN provider_details pd ON (prt.provider_id = pd.provider_id)";
 		$result = mysql_query( $query, $dbh );
 		$table_headers = array(
@@ -192,9 +203,9 @@ function actions($category, $dbh){
 		print "<h1>Tarife der Provider</h1>";
 		print getTableContent($table_headers, $result, "");
 		getMonthlyReport(0,0, true, $dbh);
-				
-	}
-	elseif ($category == 3){
+		break;
+		
+	case 3:
 		$query="SELECT c.date, c.phonenumber, c.identity, c.estimated_duration, d.provider_name  FROM callprotocol c LEFT JOIN provider_details d ON (c.provider_id=d.provider_id) WHERE c.provider_id > 0 AND c.calltype=3 AND ISNULL(c.billed)";
 		$result = mysql_query( $query, $dbh );
 		$table_headers = array(
@@ -208,9 +219,21 @@ function actions($category, $dbh){
 		print "<h1>Buchungscheck: Protokollierte kostenpflichtige Anrufe, die keinen Buchungsdatensatz haben</h1>";
 		print getTableContent($table_headers, $result, "");
 		
-	}
-	elseif ($category == 4){
-
+		$result = mysql_query( "SELECT * FROM unmatched_calls", $dbh );
+		$table_headers = array(
+			'Nr.',
+			'Provider',
+			'Datum / Uhrzeit',
+			'Dauer',
+			'Tariftyp',
+			'Kosten',
+			'Telefonnummer'
+			);
+		print "<h1>Buchungscheck: Anrufe aus EVN's, die nicht im Protokoll gefunden worden sind.</h1>";
+		print getTableContent($table_headers, $result, "");
+		break;
+			
+	case 4:
 		$table_headers = array(
 			'Nr.',
 			'Monat',
@@ -265,10 +288,9 @@ function actions($category, $dbh){
 		$result = mysql_query( $query, $dbh );
 		print "<h1>2008: Overview ($timestep_level)</h1>";
 		print getTableContent($table_headers, $result, "");
-		
-	}
-	elseif ($category == 5){
-		
+		break;
+				
+	case 5:
 		$query="SELECT cpt.identity, cpt.phonenumber, $totalduration FROM callprotocol cpt where cpt.calltype != 3 GROUP BY cpt.phonenumber ORDER BY SUM(cpt.estimated_duration) DESC LIMIT 20";
 		$result = mysql_query( $query, $dbh );
 		$table_headers = array(
@@ -309,10 +331,9 @@ function actions($category, $dbh){
 			);
 		print "<h1>Outgoing calls: Most expensive communication partners</h1>";
 		print getTableContent($table_headers, $result, "");
+		break;
 		
-	}
-	elseif ($category == 6){
-
+	case 6:
 		$importType = isset($_REQUEST['import_type']) ? intval($_REQUEST['import_type']) : 0;
 		if ( $importType == 0){
 			print '<h2><a href="?category=6&import_type=1">Anrufliste aus Fritzbox importieren</a></h2>';
@@ -344,16 +365,20 @@ function actions($category, $dbh){
 			print "<pre>" . htmlspecialchars( $call_import->getTrace() ) . "</pre>";
 			
 		}
-	}
-	elseif ( $category == 7 ){
+		break;
+		
+	case 7:
 		print "<p>This check can help you to find problems in your setup</p>";
 		print '<div class="welcome" style="text-align: left;"><h1>Checking optional configuration parameters</h1>' . $sermonOptionalSettings . '</div>';
-	}
-	elseif ( $category == CATEGORY_LOGOUT && AUTHENTICATION_ENABLED){
-		session_unregister('AUTHENTICATED'); //logout
-		session_unregister('MULTIPLE_LOGIN_ATTEMPT');
-		print '<div class="welcome"><h1>Logout successful.</h1>'.
-			'<p><a href="index.php">Login again</a></p></div>';
+		break;
+	case CATEGORY_LOGOUT:
+		if (AUTHENTICATION_ENABLED){
+			session_unregister('AUTHENTICATED'); //logout
+			session_unregister('MULTIPLE_LOGIN_ATTEMPT');
+			print '<div class="welcome"><h1>Logout successful.</h1>'.
+				'<p><a href="index.php">Login again</a></p></div>';
+		}
+		break;
 	}
 }
 

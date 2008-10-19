@@ -30,15 +30,17 @@
 
 class fritzBoxRemote extends curllib {
 	
-	var $callerList;
-	var $callerString;
+	var $callerList,
+		$callerString,
+		$tr;
 	
 	function __construct($traceObj){
 		parent::__construct($traceObj);
 		$this->callerList = array();	
 		$this->callerString = "";	
 		$this->setBaseUrl("http://".FRITZBOX_HOSTNAME."/");
-		//$this->enableCookieJar( YAPHOBIA_COOKIEJAR_DIR . 'cookiejar_fritzbox.txt' );		
+		//$this->enableCookieJar( YAPHOBIA_COOKIEJAR_DIR . 'cookiejar_fritzbox.txt' );
+		$this->tr = $traceObj;		
 	}
 
 	public function logon($password){
@@ -48,7 +50,6 @@ class fritzBoxRemote extends curllib {
 			"getpage=../html/de/menus/menu2.html&errorpage=../html/index.html&var:lang=de&var:pagename=home&var:menu=home&login:command/password=$password", 
 			"/cgi-bin/webcm?getpage=../html/index_inhalt.html"
 		);
-		//$this->trace .= $response;
 	}
 
 	public function logout(){
@@ -94,13 +95,12 @@ class fritzBoxRemote extends curllib {
 			$comment,
 			"cgi-bin/webcm?getpage=..%2Fhtml%2Fde%2FFRITZ%21Box_Anrufliste.csv" 
 		);
-		//$this->trace .= $response;
 		
 		$this->callerString .= $response;
 	}	
 
 	public function loadCallerListsFromDir($dir){
-		$this->trace .= "load fritzbox caller lists from local directory";
+		$this->tr->addToTrace(3,"load fritzbox caller lists from local directory");
 		$dircontent = scandir($dir);
 		foreach ($dircontent as $file){
 			if ($file != "." && $file!= ".."){
@@ -128,7 +128,7 @@ class fritzBoxRemote extends curllib {
 				$this->callerList[] = $details;
 			}
 			else{
-				$this->trace .= "Line '$line' was skipped because it doesn't represent the expected call format.\n";
+				$this->tr->addToTrace(1,"Line '$line' was skipped because it doesn't represent the expected call format.");
 			}
 		}
 		return $this->callerList;
