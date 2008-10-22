@@ -53,8 +53,6 @@ final class sipgateRemote extends billingProviderPrototype{
 						FR_PATH    => "konto_einzel.php?show=all&timeperiod=simple&timeperiod_simpletimeperiod=[[YEAR]]-[[MONTH]]",
 						FR_IGNORE  => true //ignore content of request
 					),
-					//it seems that leaving $month empty returns a complete list of
-					//the complete call history TODO: Check this. 
 					array(
 						FR_COMMENT => "download csv for month [[YEAR]]-[[MONTH]]",
 						FR_TYPE    => FR_TYPE_BINARY,

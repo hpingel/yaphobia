@@ -22,62 +22,42 @@
 *
 */
 
-
-
-define( 'PATH_TO_YAPHOBIA', str_replace("cli","",dirname(__FILE__)) ); 
-define( 'PATH_TO_SETTINGS', PATH_TO_YAPHOBIA . 'config/settings.php' );
-
-//check for settings file
-
-if (file_exists(PATH_TO_SETTINGS)){
-	require_once(PATH_TO_SETTINGS);	
-}
-else{
-	die('<p>ERROR: There is no configuration file <b>settings.php</b>!<br/>Please copy <b>settings.defaults.php</b> to <b>settings.php</b> and change the options within the file according to your needs.</p>');
-}
-
-require_once( PATH_TO_YAPHOBIA. "classes/class.trace.php");
-require_once( PATH_TO_YAPHOBIA. "classes/class.db_manager.php");
+define( 'PATH_TO_YAPHOBIA', str_replace("cli","",dirname(__FILE__)) );
+require_once( PATH_TO_YAPHOBIA. "classes/class.cliEnvironment.php");
 require_once( PATH_TO_YAPHOBIA. "classes/class.callImportManager.php");
-require_once( PATH_TO_YAPHOBIA. "classes/class.installHelpers.php");
 
-print "==================================================\n";
-print " Welcome to Yaphobia!\n";
-print " Yet another phone bill application...\n";
-print " You are using Yaphobia version ".YAPHOBIA_VERSION."\n";
-print "==================================================\n";
-print " gather_calls.php is an example script to show how\n";
-print " call data is imported into Yaphobia's database\n";
-print " automatically.\n";
-print "==================================================\n";
+class cliGatherCalls extends cliEnvironment { 
 
-//check mandatory settings + add default settings for optional settings
-//FIXME: this should be part of a new cli environment class
-$ih = new installHelpers();
-$sermon = $ih->proofreadMandatorySettings();
-print $sermon;
-$sermonOptionalSettings = $ih->proofreadOptionalSettings();
-//print $sermonOptionalSettings;
+	function __construct(){
+		parent::__construct(
+			" gather_calls.php is an example script to show how\n".
+			" call data is imported into Yaphobia's database\n".
+			" automatically.\n"
+		);
+		$this->checkOptionalConfig();
+		$this->start();	
+		
+	}
 
-
-$db = new dbMan();
-$dbh = $db->getDBHandle();
-$traceObj = new trace('text');
-$call_import = new callImportManager($dbh, $traceObj);
-$call_import->getFritzBoxCallerList();
-
-if (DUSNET_ACTIVE){ 
-	$dusnet_callist = $call_import->getDusNetCalls( DUSNET_SIPACCOUNT, DUSNET_USERNAME, DUSNET_PASSWORD );
-	$call_import->putDusNetCallArrayIntoDB($dusnet_callist, DUSNET_PROVIDER_ID);
+	private function start(){
+		$call_import = new callImportManager($this->dbh, $this->traceObj);
+		$call_import->getFritzBoxCallerList();
+		
+		if (DUSNET_ACTIVE){ 
+			$dusnet_callist = $call_import->getDusNetCalls( DUSNET_SIPACCOUNT, DUSNET_USERNAME, DUSNET_PASSWORD );
+			$call_import->putDusNetCallArrayIntoDB($dusnet_callist, DUSNET_PROVIDER_ID);
+		}
+			
+		if (SIPGATE_ACTIVE){ 
+			//set month and year to empty values to persuade sipgate to return a complete call history
+			//$call_import->setMonth("");
+			//$call_import->setYear("");
+			$sg_callist = $call_import->getSipgateCallsOfCurrentMonth( SIPGATE_USERNAME, SIPGATE_PASSWORD);
+			$call_import->putSipgateCallArrayIntoDB($sg_callist, SIPGATE_PROVIDER_ID);
+		}
+	}
 }
-	
-if (SIPGATE_ACTIVE){ 
-	$sg_callist = $call_import->getSipgateCallsOfCurrentMonth( SIPGATE_USERNAME, SIPGATE_PASSWORD);
-	$call_import->putSipgateCallArrayIntoDB($sg_callist, SIPGATE_PROVIDER_ID);
-}
-	
-print "==================================================\n";
-print "= End of script                                  =\n";
-print "==================================================\n";
+
+$cgc = new cliGatherCalls();
 
 ?>

@@ -121,11 +121,12 @@
 			border: 1px solid black;
 			width: 80%;
 			overflow: auto;
-			margin-right: auto;
-			margin-left: auto;
+			margin: 0px auto 0px auto;
 			text-align: left;
 			background-color: lightyellow;
-			border: 1px solid grey;
+			border-width: 1px 0px 0px 0px;
+			border-style: dotted;
+			border-color: white;
 			padding: 5px;
 		}
 		

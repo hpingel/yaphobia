@@ -49,6 +49,20 @@ class callImportManager{
 	}
 	
 	/*
+	 * sets the year to an arbitrary value
+	 */
+	public function setYear( $year ){
+		$this->currentYear = $year;
+	}
+
+	/*
+	 * sets the month to an arbitrary value
+	 */
+	public function setMonth( $month ){
+		$this->currentMonth = $month;
+	}
+	
+	/*
 	 * getProviderCalls
 	 */
 	private function getBillingProviderCalls( $p, $username, $password, $csv_file_flag){
@@ -59,7 +73,7 @@ class callImportManager{
 		$p->logout();
 		$calllist = $p->getCallerListArray();
 		$credit = $p->getCredit();
-		$this->tr->addToTrace(2, "Credit: " . $credit);
+		$this->tr->addToTrace(3, "Current credit: " . $credit);
 		if ($csv_file_flag) $p->createCsvFile();
 		return $calllist;
 	}
@@ -310,14 +324,14 @@ class callImportManager{
 		$result = mysql_query( $query, $this->dbh );
 		$matches = mysql_num_rows($result);
 		if ($matches > 1){
-			$this->tr->addToTrace( 2, 
+			$tr_buffer =  
 				"Not able to match following call in protocol:" . 
 				print_r($x, true).
-				"See possible matches here:\n"
-			);
+				"See possible matches here:\n";
 			while ($row = mysql_fetch_assoc($result)) {
-			    $this->tr->addToTrace( 2, print_r($row, true));
-			}		
+			    $tr_buffer .= print_r($row, true);
+			}
+			$this->tr->addToTrace( 2, $tr_buffer); 
 		}
 		elseif ($matches == 0){
 			$this->tr->addToTrace( 2, "No match in call protocol for following call:\n" . print_r ($x, true));

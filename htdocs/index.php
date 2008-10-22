@@ -27,13 +27,24 @@ require_once( "../classes/class.db_manager.php");
 require_once( "../classes/class.callImportManager.php");
 require_once( "../classes/class.installHelpers.php");
 
-
-//check for show stoppers:
-//1) presence of settings file
-//2) correct authentication 
-//3) mandatory configuration constants
+define('CATEGORY_MONTHLY_BILLS', 	1);
+define('CATEGORY_RATE_TYPE_CHECK', 	2);
+define('CATEGORY_MATCH_CHECK', 		3);
+define('CATEGORY_ANNUAL_OVERVIEW', 	4);
+define('CATEGORY_MIXED_STATS', 		5);
+define('CATEGORY_DATA_IMPORT', 		6);
+define('CATEGORY_CONFIG_CHECK',		7);
+define('CATEGORY_LOGOUT', 			100);
 
 define( 'PATH_TO_SETTINGS', str_replace("htdocs","",dirname(__FILE__)) . 'config/settings.php' );
+
+/*
+ * check for show stoppers:
+ * 1) presence of settings file
+ * 2) correct authentication
+ * 3) mandatory configuration constants
+ */
+
 if (file_exists(PATH_TO_SETTINGS)){
 	require_once(PATH_TO_SETTINGS);
 	define('AUTHENTICATION_ENABLED',defined('YAPHOBIA_WEB_INTERFACE_PASSWORD') && (constant('YAPHOBIA_WEB_INTERFACE_PASSWORD') != ""));
@@ -96,19 +107,6 @@ define(CR,"\n");
 
 <?php
 
-define('CATEGORY_LOGOUT', 100);
-
-$category_menu = array(
-	1 => 'Monatsrechnungen',
-	2 => 'Tarifcheck',
-	3 => 'Buchungscheck',
-	4 => 'Jahres&uuml;berblick',
-	5 => 'Weitere Statistiken',
-	6 => 'Datenimport',
-	7 => 'Konfigurations-Check'
-);
-
-
 if ( AUTHENTICATION_ENABLED ){
 	$category_menu[CATEGORY_LOGOUT] = 'Logout';
 }
@@ -118,11 +116,20 @@ $cat = isset($_REQUEST["category"]) ? intval($_REQUEST["category"]) : 1;
 print '<div class="yaph_header"><h1>Yaphobia</h1>';
 
 if (!defined('CLOSE_GATE') && ($cat != CATEGORY_LOGOUT) || !AUTHENTICATION_ENABLED ) {
-	
+
+	$category_menu = array(
+		CATEGORY_MONTHLY_BILLS 		=> 'Monatsrechnungen',
+		CATEGORY_RATE_TYPE_CHECK 	=> 'Tarifcheck',
+		CATEGORY_MATCH_CHECK 		=> 'Buchungscheck',
+		CATEGORY_ANNUAL_OVERVIEW	=> 'Jahresüberblick',
+		CATEGORY_MIXED_STATS 		=> 'Weitere Statistiken',
+		CATEGORY_DATA_IMPORT 		=> 'Datenimport',
+		CATEGORY_CONFIG_CHECK		=> 'Konfigurations-Check'
+	);	
 	print '<p class="category_menu">';
 	foreach ($category_menu as $id=>$desc){
 		$class= ($id == $cat)? ' class="active"' : '';
-		print '<a'.$class.' href="?category='.$id.'">'.$desc.'</a> ';
+		print '<a'.$class.' href="?category='.intval($id).'">'.htmlspecialchars($desc).'</a> ';
 	}
 	print "</p>";
 }
@@ -184,14 +191,13 @@ function actions($category, $dbh){
 	$year = '2008';
 	
 	switch ($category){
-		
-	case 1:
+	case CATEGORY_MONTHLY_BILLS:
 		$month = intval($_REQUEST["m"]);
 		$year = intval($_REQUEST["y"]);
 		getMonthlyReport($month,$year, false, $dbh);
 		break;
 		
-	case 2:
+	case CATEGORY_RATE_TYPE_CHECK:
 		$query="SELECT pd.provider_name, prt.rate_type, concat( prt.price_per_minute, ' EUR') FROM provider_rate_types prt LEFT JOIN provider_details pd ON (prt.provider_id = pd.provider_id)";
 		$result = mysql_query( $query, $dbh );
 		$table_headers = array(
@@ -205,7 +211,7 @@ function actions($category, $dbh){
 		getMonthlyReport(0,0, true, $dbh);
 		break;
 		
-	case 3:
+	case CATEGORY_MATCH_CHECK:
 		$query="SELECT c.date, c.phonenumber, c.identity, c.estimated_duration, d.provider_name  FROM callprotocol c LEFT JOIN provider_details d ON (c.provider_id=d.provider_id) WHERE c.provider_id > 0 AND c.calltype=3 AND ISNULL(c.billed)";
 		$result = mysql_query( $query, $dbh );
 		$table_headers = array(
@@ -233,7 +239,7 @@ function actions($category, $dbh){
 		print getTableContent($table_headers, $result, "");
 		break;
 			
-	case 4:
+	case CATEGORY_ANNUAL_OVERVIEW:
 		$table_headers = array(
 			'Nr.',
 			'Monat',
@@ -289,8 +295,8 @@ function actions($category, $dbh){
 		print "<h1>2008: Overview ($timestep_level)</h1>";
 		print getTableContent($table_headers, $result, "");
 		break;
-				
-	case 5:
+		
+	case CATEGORY_MIXED_STATS:
 		$query="SELECT cpt.identity, cpt.phonenumber, $totalduration FROM callprotocol cpt where cpt.calltype != 3 GROUP BY cpt.phonenumber ORDER BY SUM(cpt.estimated_duration) DESC LIMIT 20";
 		$result = mysql_query( $query, $dbh );
 		$table_headers = array(
@@ -333,14 +339,18 @@ function actions($category, $dbh){
 		print getTableContent($table_headers, $result, "");
 		break;
 		
-	case 6:
+	case CATEGORY_DATA_IMPORT:
 		$importType = isset($_REQUEST['import_type']) ? intval($_REQUEST['import_type']) : 0;
 		if ( $importType == 0){
-			print '<h2><a href="?category=6&import_type=1">Anrufliste aus Fritzbox importieren</a></h2>';
-			if (SIPGATE_ACTIVE)
-				print '<h2><a href="?category=6&import_type=2">EVN des aktuellen Monats von sipgate importieren</a></h2>';
+			define('IMPORT_LINK_START', '<h2><a href="?category='.intval(CATEGORY_DATA_IMPORT).'&import_type=');
+			define('IMPORT_LINK_END', '</a></h2>'); 
+			print IMPORT_LINK_START . '1">Anrufliste aus Fritzbox importieren' . IMPORT_LINK_END;
+			if (SIPGATE_ACTIVE){
+				print IMPORT_LINK_START . '2">EVN des aktuellen Monats von sipgate importieren' . IMPORT_LINK_END;
+				print IMPORT_LINK_START . '3">Komplette EVN-Historie von sipgate importieren' . IMPORT_LINK_END;
+			}
 			if (DUSNET_ACTIVE)
-				print '<h2><a href="?category=6&import_type=3">EVN des aktuellen Monats von dus.net importieren</a></h2>';
+				print IMPORT_LINK_START . '4">EVN des aktuellen Monats von dus.net importieren' . IMPORT_LINK_END;
 		}
 		else{
 		}
@@ -350,21 +360,29 @@ function actions($category, $dbh){
 				
 		if ( $importType == 1){
 			print '<h2>Anrufliste aus Fritzbox importieren</h2>';
-			print "<pre>" . htmlspecialchars($call_import->getFritzBoxCallerList()) ."</pre>";
+			$call_import->getFritzBoxCallerList();
 		}
 		elseif ( $importType == 2 && SIPGATE_ACTIVE){
 			print '<h2>EVN des aktuellen Monats von sipgate importieren</h2>';
 			$sg_callist = $call_import->getSipgateCallsOfCurrentMonth( SIPGATE_USERNAME, SIPGATE_PASSWORD);
 			$call_import->putSipgateCallArrayIntoDB($sg_callist, SIPGATE_PROVIDER_ID);
 		}
-		elseif ( $importType == 3 && DUSNET_ACTIVE){
+		elseif ( $importType == 3 && SIPGATE_ACTIVE){
+			print '<h2>Komplette EVN-Historie von sipgate importieren</h2>';
+			//set month and year to empty values to persuade sipgate to return a complete call history
+			$call_import->setMonth("");
+			$call_import->setYear("");
+			$sg_callist = $call_import->getSipgateCallsOfCurrentMonth( SIPGATE_USERNAME, SIPGATE_PASSWORD);
+			$call_import->putSipgateCallArrayIntoDB($sg_callist, SIPGATE_PROVIDER_ID);
+		}
+		elseif ( $importType == 4 && DUSNET_ACTIVE){
 			print '<h2>EVN des aktuellen Monats von dus.net importieren</h2>';
 			$dusnet_callist = $call_import->getDusNetCalls( DUSNET_SIPACCOUNT, DUSNET_USERNAME, DUSNET_PASSWORD );
 			$call_import->putDusNetCallArrayIntoDB($dusnet_callist, DUSNET_PROVIDER_ID);
 		}
 		break;
 		
-	case 7:
+	case CATEGORY_CONFIG_CHECK:
 		print "<p>This check can help you to find problems in your setup</p>";
 		print '<div class="welcome" style="text-align: left;"><h1>Checking optional configuration parameters</h1>' . $sermonOptionalSettings . '</div>';
 		break;
