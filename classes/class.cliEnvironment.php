@@ -32,9 +32,10 @@ define( 'UGLY_LINE', "==================================================\n");
 class cliEnvironment{
 
 	protected
-			$traceObj,
-			$dbh,
-			$ih;
+		$traceObj,
+		$db,
+		$dbh,
+		$ih;
 	
 	function __construct( $infotext ){
 		$this->traceObj = new trace('text');
@@ -50,8 +51,8 @@ class cliEnvironment{
 		$sermon = $this->ih->proofreadMandatorySettings();
 		print $sermon;
 		
-		$db = new dbMan();
-		$this->dbh = $db->getDBHandle();
+		$this->db = new dbMan();
+		$this->dbh = $this->db->getDBHandle();
 		
 		print 
 			UGLY_LINE.

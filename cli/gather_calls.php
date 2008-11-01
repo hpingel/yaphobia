@@ -36,18 +36,17 @@ class cliGatherCalls extends cliEnvironment {
 		);
 		$this->checkOptionalConfig();
 		$this->start();	
-		
 	}
 
 	private function start(){
 		$call_import = new callImportManager($this->dbh, $this->traceObj);
 		$call_import->getFritzBoxCallerList();
-		
+
 		if (DUSNET_ACTIVE){ 
 			$dusnet_callist = $call_import->getDusNetCalls( DUSNET_SIPACCOUNT, DUSNET_USERNAME, DUSNET_PASSWORD );
 			$call_import->putDusNetCallArrayIntoDB($dusnet_callist, DUSNET_PROVIDER_ID);
 		}
-			
+
 		if (SIPGATE_ACTIVE){ 
 			//set month and year to empty values to persuade sipgate to return a complete call history
 			//$call_import->setMonth("");

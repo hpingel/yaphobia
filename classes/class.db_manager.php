@@ -74,6 +74,7 @@ class dbMan {
 	 */
 	function __destruct(){
 		@mysql_close($this->db);
+		//print "MySQL connection was closed.\n";
 	}
 }
 

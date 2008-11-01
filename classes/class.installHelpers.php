@@ -131,6 +131,11 @@ class installHelpers{
 			if (!defined( $const )){
 				$sermon_items[] = $this->pleaseDefineMandatoryConstant($const);
 			}
+			/*
+			else{
+				print "$const: ".constant($const)."\n";
+			}
+			*/
 		}
 		
 		if (count($sermon_items) > 0){

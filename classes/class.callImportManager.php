@@ -52,14 +52,16 @@ class callImportManager{
 	 * sets the year to an arbitrary value
 	 */
 	public function setYear( $year ){
-		$this->currentYear = $year;
+		$this->currentYear = intval($year);
+		//FIXME: add range check
 	}
 
 	/*
 	 * sets the month to an arbitrary value
 	 */
 	public function setMonth( $month ){
-		$this->currentMonth = $month;
+		$this->currentMonth = intval($month);
+		//FIXME: add range check
 	}
 	
 	/*
@@ -158,9 +160,9 @@ class callImportManager{
 		$calllist = $fb->getCallerListArray();
 		foreach ($calllist as $call){
 			//date, identity, phonenumber, calltype, usedphone, providerstring, provider_id, estimated_duration
-			$date = mysql_real_escape_string('20' . substr($call[1],6,2) .'-'. substr($call[1],3,2) .'-'. substr($call[1],0,2) . ' ' . substr($call[1],9,5) . ':00');
+			$date = mysql_real_escape_string('20' . substr($call[1],6,2) .'-'. substr($call[1],3,2) .'-'. substr($call[1],0,2) . ' ' . substr($call[1],9,5) . ':00', $this->dbh);
 			list($hours, $minutes) = explode(":",$call[6]);
-			$duration = mysql_real_escape_string( intval($minutes) + intval($hours) * 60);
+			$duration = mysql_real_escape_string( intval($minutes) + intval($hours) * 60, $this->dbh);
 			//fix typo in number
 			if ($call[5] == FRITZBOX_PROTOCOL_SIPGATE_ID_WRONG){
 				$call[5] = FRITZBOX_PROTOCOL_SIPGATE_ID_CORRECT;
@@ -178,7 +180,7 @@ class callImportManager{
 			
 			//security: prevent the possiblity of sql injections
 			foreach ($call as $key=>$value){
-				$call[$key] = mysql_real_escape_string( $value);
+				$call[$key] = mysql_real_escape_string( $value, $this->dbh);
 			}
 			
 			$insertstring = "'$date','$call[2]','$call[3]','$call[0]','$call[4]','$call[5]','$providerid','$duration'";
@@ -299,7 +301,7 @@ class callImportManager{
 		
 		//security: prevent the possiblity of sql injections
 		foreach ($x as $key=>$value){
-			$x[$key] = mysql_real_escape_string( $value);
+			$x[$key] = mysql_real_escape_string( $value, $this->dbh);
 		}
 		
 		//reformat cost value
@@ -399,7 +401,7 @@ class callImportManager{
 				"billed_cost = 0, ".
 				"billed = 2, ". // 2 means that it was done without an evn
 				"dateoffset=0, ".
-				"rate_type ='".mysql_real_escape_string($rate_type)."', ".
+				"rate_type ='".mysql_real_escape_string($rate_type, $this->dbh)."', ".
 				"billed_duration = CEIL(estimated_duration/60) ".
 			"WHERE ".
 				"provider_id = ".intval($provider_id)." AND ".
