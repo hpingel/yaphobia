@@ -136,12 +136,12 @@ class callImportManager{
 			}
 			
 			$result = $this->checkCallUniqueness( array(
-				'providerid' => $providerid,
-				'number' => $call[1],
-				'date' => $call[0],
-				'duration' => $duration,
-				'rate_description'=> $call[2],
-				'billed_cost' => $call[5]
+				'providerid' => 	$providerid,
+				'number' => 		$call[1],
+				'date' => 			$call[0],
+				'duration' => 		$duration,
+				'rate_description'=>$call[2],
+				'billed_cost' =>	$call[5]
 			));
 		}
 		//searches through database to see if there are new call rates to add to the list
@@ -259,7 +259,7 @@ class callImportManager{
 		if ($call_array["identity"] != ""){
 			$update_query = 
 				"UPDATE user_contacts SET identity = '".mysql_real_escape_string($call_array["identity"])."' ".
-				"WHERE phonenumber = '".mysql_real_escape_string($call_array["phonenumber"])."'";
+				"WHERE phonenumber = '".mysql_real_escape_string($call_array["phonenumber"])."' AND identity = ''";
 			$update_result = mysql_query($update_query,$this->dbh);
 			if (!$update_result){
 	    		$this->tr->addToTrace( 2, 'Update statement was incorrect: ' . mysql_errno() . ") ". mysql_error() );
@@ -313,7 +313,7 @@ class callImportManager{
 	}
 	
 	/*
-	 * tries to buffer a call from a call provider that couldn't be matched to an existing call from the protocol
+	 * tries to buffer a call from a billing provider that couldn't be matched to an existing call from the protocol
 	 * store it in db table unmatched_call
 	 * if the call already is in the database table, it will not be added another time
 	 */
@@ -353,10 +353,20 @@ class callImportManager{
 		foreach ($x as $key=>$value){
 			$x[$key] = mysql_real_escape_string( $value, $this->dbh);
 		}
-		
+
 		//reformat cost value
 		$x['billed_cost'] = floatval(str_replace(',','.',$x['billed_cost']));
-		
+
+		//provider_id, date, phonenumber, billed_duration, billed_cost, rate_type
+		$unmatchedCallString = 
+			"'" . 
+			$x['providerid'] . "','" . 
+			$x['date'] . "','" .
+			$x['number'] . "','" .
+			$x['duration'] . "','" .
+			$x['billed_cost'] . "','" .
+			$x['rate_description'] . "'"; 
+				
 		$update= 
 			"billed = '1', ".
 			"dateoffset = TIMESTAMPDIFF(SECOND, date,'".$x['date']."'), ".
@@ -384,18 +394,10 @@ class callImportManager{
 			    $tr_buffer .= print_r($row, true);
 			}
 			$this->tr->addToTrace( 2, $tr_buffer); 
+			$this->insertUnmatchedCall ($unmatchedCallString);
 		}
 		elseif ($matches == 0){
 			$this->tr->addToTrace( 2, "No match in call protocol for following call:\n" . print_r ($x, true));
-			//provider_id, date, phonenumber, billed_duration, billed_cost, rate_type
-			$unmatchedCallString = 
-				"'" . 
-				$x['providerid'] . "','" . 
-				$x['date'] . "','" .
-				$x['number'] . "','" .
-				$x['duration'] . "','" .
-				$x['billed_cost'] . "','" .
-				$x['rate_description'] . "'"; 
 			$this->insertUnmatchedCall ($unmatchedCallString);
 		}
 		else{
