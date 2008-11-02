@@ -46,11 +46,13 @@ class htmlFrontend{
 		$cat,
 		$months,
 		$db,
-		$dbh
-		;
+		$dbh,
+		$year,
+		$month,
+		$tr;
 	
 	function __construct() {
-		
+		$this->tr = new trace('html');		
 		$this->months = array(
 			'Januar',
 			'Februar',
@@ -64,9 +66,7 @@ class htmlFrontend{
 			'Oktober',
 			'November',
 			'Dezember'
-		);			
-		$this->cat = isset($_REQUEST["category"]) ? intval($_REQUEST["category"]) : 1;
-		$this->printview = isset($_REQUEST["printview"]) ? (intval($_REQUEST["printview"]) == 1 ? true : false ) : false;
+		);
 		
 		/*
 		 * check for show stoppers:
@@ -114,12 +114,22 @@ class htmlFrontend{
 			define('CLOSE_GATE', '<div class="welcome"><p>ERROR: There is no configuration file <b>settings.php</b>!<br/>Please copy <b>settings.defaults.php</b> to <b>settings.php</b> and change the options within the file according to your needs.</p></div>');
 		}
 		
+		//import request vars and sanititze them
+		$this->cat 		= isset($_REQUEST['category']) ? intval($_REQUEST['category']) : 1;
+		$this->printview= isset($_REQUEST['printview']) ? (intval($_REQUEST['printview']) == 1 ? true : false ) : false;
+		$this->year 	= isset($_REQUEST['y']) ? intval($_REQUEST['y']) : date('Y', time());
+		$this->month 	= isset($_REQUEST['m']) ? intval($_REQUEST['m']) : date('m', time());
+		
+		//range check
+		$this->month 	= ($this->month > 12 || $this->month < 1) ? date('m', time()) : $this->month;
+		$this->year 	= ($this->year > 2100 || $this->year < 2000) ? date('Y', time()) : $this->year;
+		
 		
 		//header("Content-type: text/xml"); //disabled until we solved some problems
 		print '<?xml version="1.0" encoding="utf-8"?>';
 		
 		define(CR,"\n");
-
+		
 ?>
 <!DOCTYPE html
      PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
@@ -227,18 +237,18 @@ class htmlFrontend{
 				$category = 6;
 		}
 		
-		
+		//sql patterns often used
 		$totalduration = "CONCAT(SUM(cpt.estimated_duration) DIV 60, 'h ', SUM(cpt.estimated_duration) MOD 60, 'm') AS total_duration";
 		$totalbilledduration = "CONCAT(SUM(CEIL(cpt.billed_duration/60)) DIV 60, 'h ', SUM(CEIL(cpt.billed_duration/60)) MOD 60, 'm') AS total_billed_duration";
 		$totalcosts = "CONCAT(FORMAT(SUM(cpt.billed_cost),2),' EUR') AS total_costs";
 	
-		$year = '2008';
-		
 		switch ($category){
 		case CATEGORY_MONTHLY_BILLS:
-			$month = intval($_REQUEST["m"]);
-			$year = intval($_REQUEST["y"]);
-			$this->getMonthlyReport($month,$year, false, true);
+			/*
+			$this->month = intval($_REQUEST["m"]);
+			$this->year = intval($_REQUEST["y"]);
+			*/
+			$this->getMonthlyReport(false, true);
 			break;
 			
 		case CATEGORY_RATE_TYPE_CHECK:
@@ -301,7 +311,7 @@ class htmlFrontend{
 			
 			$query="SELECT cdm.id, ".
 				"$datedisplay, CONCAT(count(cpt.date), ' Gespraeche') AS sumofcalls, $totalduration, $totalbilledduration, $totalcosts ".
-				"FROM calendar_dummy_data cdm LEFT JOIN callprotocol cpt ON cdm.id = $timestep_level(cpt.date) AND YEAR(cpt.date)=$year ".
+				"FROM calendar_dummy_data cdm LEFT JOIN callprotocol cpt ON cdm.id = $timestep_level(cpt.date) AND YEAR(cpt.date)=$this->year ".
 				"WHERE cdm.id <= $idlimit ".
 				"GROUP BY cdm.id";
 			
@@ -316,7 +326,7 @@ class htmlFrontend{
 			
 			$query="SELECT cdm.id, ".
 				"$datedisplay, CONCAT(count(cpt.date), ' Gespraeche') AS sumofcalls, $totalduration, $totalbilledduration, $totalcosts ".
-				"FROM calendar_dummy_data cdm LEFT JOIN callprotocol cpt ON cdm.id = $timestep_level(cpt.date) AND YEAR(cpt.date)=$year ".
+				"FROM calendar_dummy_data cdm LEFT JOIN callprotocol cpt ON cdm.id = $timestep_level(cpt.date) AND YEAR(cpt.date)=$this->year ".
 				"WHERE cdm.id <= $idlimit ".
 				"GROUP BY cdm.id";
 			
@@ -331,7 +341,7 @@ class htmlFrontend{
 			
 			$query="SELECT cdm.id, ".
 				"$datedisplay, CONCAT(count(cpt.date), ' Gespraeche') AS sumofcalls, $totalduration, $totalbilledduration, $totalcosts ".
-				"FROM calendar_dummy_data cdm LEFT JOIN callprotocol cpt ON cdm.id = $timestep_level(cpt.date) AND YEAR(cpt.date)=$year ".
+				"FROM calendar_dummy_data cdm LEFT JOIN callprotocol cpt ON cdm.id = $timestep_level(cpt.date) AND YEAR(cpt.date)=$this->year ".
 				"WHERE cdm.id <= $idlimit ".
 				"GROUP BY cdm.id";
 			
@@ -414,28 +424,39 @@ class htmlFrontend{
 		case CATEGORY_DATA_IMPORT:
 			$importType = isset($_REQUEST['import_type']) ? intval($_REQUEST['import_type']) : 0;
 			if ( $importType == 0){
-				define('IMPORT_LINK_START', '<h2><a href="?category='.intval(CATEGORY_DATA_IMPORT).'&import_type=');
+				define('IMPORT_LINK_START', '<h2><a href="?y='.date('Y', time()).'&m='.date('m', time()).'&category='.intval(CATEGORY_DATA_IMPORT).'&import_type=');
 				define('IMPORT_LINK_END', '</a></h2>'); 
 				print IMPORT_LINK_START . '1">Anrufliste aus Fritzbox importieren' . IMPORT_LINK_END;
 				if (SIPGATE_ACTIVE){
+					print "<fieldset><legend>sipgate</legend>";
 					print IMPORT_LINK_START . '2">EVN des aktuellen Monats von sipgate importieren' . IMPORT_LINK_END;
+					print "<p>EVN eines Monats importieren: ";
+					$this->monthPickerForm( '<input type="hidden" name="import_type" value="2">' );
 					print IMPORT_LINK_START . '3">Komplette EVN-Historie von sipgate importieren' . IMPORT_LINK_END;
+					print "</p>";
+					print "</fieldset>";
 				}
 				if (DUSNET_ACTIVE)
+					print "<fieldset><legend>dus.net</legend>";
 					print IMPORT_LINK_START . '4">EVN des aktuellen Monats von dus.net importieren' . IMPORT_LINK_END;
+					print "<p>EVN eines Monats importieren: ";
+					$this->monthPickerForm( '<input type="hidden" name="import_type" value="4">' );
+					print "</p>";
+					print "</fieldset>";
 			}
 			else{
 			}
 	
-			$tr = new trace('html');
-			$call_import = new callImportManager($this->dbh, $tr);
+			$call_import = new callImportManager($this->dbh, $this->tr);
 					
 			if ( $importType == 1){
 				print '<h2>Anrufliste aus Fritzbox importieren</h2>';
 				$call_import->getFritzBoxCallerList();
 			}
 			elseif ( $importType == 2 && SIPGATE_ACTIVE){
-				print '<h2>EVN des aktuellen Monats von sipgate importieren</h2>';
+				print '<h2>EVN des Monats '.$this->month . '/'. $this->year . ' von sipgate importieren</h2>';
+				$call_import->setMonth($this->month);
+				$call_import->setYear($this->year);
 				$sg_callist = $call_import->getSipgateCallsOfCurrentMonth( SIPGATE_USERNAME, SIPGATE_PASSWORD);
 				$call_import->putSipgateCallArrayIntoDB($sg_callist, SIPGATE_PROVIDER_ID);
 			}
@@ -448,7 +469,9 @@ class htmlFrontend{
 				$call_import->putSipgateCallArrayIntoDB($sg_callist, SIPGATE_PROVIDER_ID);
 			}
 			elseif ( $importType == 4 && DUSNET_ACTIVE){
-				print '<h2>EVN des aktuellen Monats von dus.net importieren</h2>';
+				print '<h2>EVN des Monats '.$this->month . '/'. $this->year . ' von dus.net importieren</h2>';
+				$call_import->setMonth($this->month);
+				$call_import->setYear($this->year);				
 				$dusnet_callist = $call_import->getDusNetCalls( DUSNET_SIPACCOUNT, DUSNET_USERNAME, DUSNET_PASSWORD );
 				$call_import->putDusNetCallArrayIntoDB($dusnet_callist, DUSNET_PROVIDER_ID);
 			}
@@ -473,32 +496,32 @@ class htmlFrontend{
 	 * creates html form with month selector
 	 * 
 	 */
-	private function monthFlicker($month, $year){
+	private function monthFlicker(){
 		
 		define('CAT','&category='.$this->cat);
 		
 		print '<div class="date_nav">';
-		if ($month > 1)
-			print '<a class="date_nav" href="?m='.($month-1 ) . '&y='.$year.CAT.'">&lt; '.$this->months[$month -2 ].'</a> | ';
-		elseif ($month == 1)
-			print '<a class="date_nav" href="?m=12&y='.($year-1).CAT.'">&lt; '.$months[11].' ' . ($year-1) . '</a> | ';
+		if ($this->month > 1)
+			print '<a class="date_nav" href="?m='.($this->month-1 ) . '&y='.$this->year.CAT.'">&lt; '.$this->months[$this->month -2 ].'</a> | ';
+		elseif ($this->month == 1)
+			print '<a class="date_nav" href="?m=12&y='.($this->year-1).CAT.'">&lt; '.$this->months[11].' ' . ($this->year-1) . '</a> | ';
 			
-		print '<span class="date_nav_active">'.$this->months[ $month -1  ].'</span>';
-		if ($month < 12)
-			print ' | <a class="date_nav" href="?m='.($month +1) . '&y='.$year.CAT.'">'.$this->months[intval($month) ].' &gt;</a> ';
-		elseif ($month == 12)
-			print ' | <a class="date_nav" href="?m=1&y='.($year+1).CAT.'">'.$this->months[0].' ' . ($year+1) . ' &gt;</a>';
+		print '<span class="date_nav_active">'.$this->months[ $this->month -1  ].'</span>';
+		if ($this->month < 12)
+			print ' | <a class="date_nav" href="?m='.($this->month +1) . '&y='.$this->year.CAT.'">'.$this->months[intval($this->month) ].' &gt;</a> ';
+		elseif ($this->month == 12)
+			print ' | <a class="date_nav" href="?m=1&y='.($this->year+1).CAT.'">'.$this->months[0].' ' . ($this->year+1) . ' &gt;</a>';
 		
 		print '</div>';
-		$this->monthPickerForm($month, $year);
+		$this->monthPickerForm('');
 	
 	}
 	
-	private function monthPickerForm($month, $year){
+	private function monthPickerForm( $hidden ){
 		print '<form name="monthpicker" action="index.php" method="post">'."\n";
-		print '<br/><select name="m">'."\n";
+		print '<select name="m">'."\n";
 		for ($z=0; $z < count($this->months); $z++){
-			$selected = ($month == ($z + 1)) ? 'selected="selected"' : ""; 
+			$selected = ($this->month == ($z + 1)) ? 'selected="selected"' : ""; 
 			print '<option '.$selected.' value="'.($z+1).'">'.$this->months[$z].'</option>'. "\n";
 		}
 		print '</select>';
@@ -506,13 +529,14 @@ class htmlFrontend{
 		$current_year = date('Y', time());
 		print ' <select name="y">'."\n";
 		for ($z = 2000; $z <= $current_year; $z++){
-			$selected = ($year == $z ) ? 'selected="selected"' : ""; 
+			$selected = ($this->year == $z ) ? 'selected="selected"' : ""; 
 			print '<option '.$selected.' value="'.$z.'">'.$z.'</option>'. "\n";
 		}
 		print '</select>';
 		
 		print 
 			'<input type="hidden" name="category" value="'.$this->cat.'"/>
+			'.$hidden.'
 			<input type="submit" value="OK"/>';
 		
 			
@@ -524,20 +548,14 @@ class htmlFrontend{
 	 * $all (true / false)
 	 * $user_cols (true / false)
 	 */
-	private function getMonthlyReport( $month, $year, $all, $user_cols){
+	private function getMonthlyReport($all, $user_cols){
 	
 		if ($all === false){
-			$month = intval($month);
-			if ($month == 0) $month = date('m', time());
-			$month = ($month > 12 || $month < 1) ? 1 : $month; //default value: january
-			$year = intval($year);
-			if ($year == 0) $year = date('Y', time());
-			$year = ($year > 2100 || $year < 2000) ? 2008 : $year; //default value: january
-			$timeperiod = " AND MONTH(c.date) = '".$month."' AND YEAR(c.date) = '".$year."'";
+			$timeperiod = " AND MONTH(c.date) = '".$this->month."' AND YEAR(c.date) = '".$this->year."'";
 			if ($this->printview === false){ 
-				$this->monthFlicker($month, $year, 1);
+				$this->monthFlicker();
 			}
-			$timeframe = htmlspecialchars($month . '/' . $year);
+			$timeframe = htmlspecialchars($this->month . '/' . $this->year);
 			
 		}
 		else{
@@ -666,7 +684,7 @@ class htmlFrontend{
 		print "<h2>Outgoing calls</h2>";
 		
 		if ($this->printview === false && $all === false){ 
-			print "<p><a href=\"index.php?category=".CATEGORY_MONTHLY_BILLS."&printview=1&y=".$year."&m=".$month."\" target=\"_blank\">Print view</a></p>";
+			print "<p><a href=\"index.php?category=".CATEGORY_MONTHLY_BILLS."&printview=1&y=".$this->year."&m=".$this->month."\" target=\"_blank\">Print view</a></p>";
 		}
 		//execute sum query and get sum row
 		$result = mysql_query( $sum_query, $this->dbh );
