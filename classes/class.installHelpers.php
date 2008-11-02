@@ -114,6 +114,31 @@ class installHelpers{
 		$result = mysql_query( $query, $this->dbh );
 		print "MySQL response: ". mysql_errno() . " " . mysql_error(). "\n";
 		
+		$query="
+			CREATE TABLE `users` (
+			  `id` SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			  `username` VARCHAR(25)  NOT NULL,
+			  PRIMARY KEY (`id`)
+			)
+			ENGINE = InnoDB
+			CHARACTER SET utf8 COLLATE utf8_general_ci;
+		";
+		$result = mysql_query( $query, $this->dbh );
+		print "MySQL response: ". mysql_errno() . " " . mysql_error(). "\n";
+		
+		$query="
+			CREATE TABLE `user_contacts` (
+			  `phonenumber` VARCHAR(50)  NOT NULL,
+			  `identity` varchar(50) NOT NULL,
+			  `related_user` TINYINT UNSIGNED NOT NULL,
+			  PRIMARY KEY (`phonenumber`)
+			)
+			ENGINE = InnoDB
+			CHARACTER SET utf8 COLLATE utf8_general_ci;
+		";
+		$result = mysql_query( $query, $this->dbh );
+		print "MySQL response: ". mysql_errno() . " " . mysql_error(). "\n";
+
 	}
 
 	public function proofreadMandatorySettings(){

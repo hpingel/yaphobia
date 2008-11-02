@@ -59,10 +59,12 @@
 		
 		td.right {
 			text-align: right;
+			white-space: nowrap;
 		}
 		
 		td.error{
 			background-color: pink;
+			white-space: nowrap;
 		}
 		td.correct{
 			background-color: lightgreen;

@@ -152,6 +152,15 @@ class callImportManager{
 	 * getFritzBoxCallerList
 	 */
 	public function getFritzBoxCallerList(){
+		
+		define('FRITZBOX_CALL_CALLTYPE', 		0);
+		define('FRITZBOX_CALL_DATE', 			1);
+		define('FRITZBOX_CALL_IDENTITY', 		2);
+		define('FRITZBOX_CALL_PHONENUMBER', 	3);
+		define('FRITZBOX_CALL_USED_PHONE',	 	4);
+		define('FRITZBOX_CALL_PROVIDER_ID', 	5);
+		define('FRITZBOX_CALL_EST_DURATION', 	6);
+				
 		$fb = new fritzBoxRemote($this->tr);
 		//$fb->loadCallerListsFromDir( $path . "/fritzbox_alte_anruflisten");
 		$fb->logon( FRITZBOX_PASSWORD ); 
@@ -159,19 +168,26 @@ class callImportManager{
 		$fb->logout(); //dummy
 		$calllist = $fb->getCallerListArray();
 		foreach ($calllist as $call){
-			//date, identity, phonenumber, calltype, usedphone, providerstring, provider_id, estimated_duration
-			$date = mysql_real_escape_string('20' . substr($call[1],6,2) .'-'. substr($call[1],3,2) .'-'. substr($call[1],0,2) . ' ' . substr($call[1],9,5) . ':00', $this->dbh);
-			list($hours, $minutes) = explode(":",$call[6]);
+			$date = mysql_real_escape_string(
+				'20' . 
+				substr($call[FRITZBOX_CALL_DATE],6,2) .'-'. 
+				substr($call[FRITZBOX_CALL_DATE],3,2) .'-'. 
+				substr($call[FRITZBOX_CALL_DATE],0,2) . ' ' . 
+				substr($call[FRITZBOX_CALL_DATE],9,5) . ':00',
+				$this->dbh
+			);
+			list($hours, $minutes) = explode(":",$call[FRITZBOX_CALL_EST_DURATION]);
 			$duration = mysql_real_escape_string( intval($minutes) + intval($hours) * 60, $this->dbh);
 			//fix typo in number
-			if ($call[5] == FRITZBOX_PROTOCOL_SIPGATE_ID_WRONG){
-				$call[5] = FRITZBOX_PROTOCOL_SIPGATE_ID_CORRECT;
+			//FIXME: this is not relevant for other users, only for me!!!
+			if ($call[FRITZBOX_CALL_PROVIDER_ID] == FRITZBOX_PROTOCOL_SIPGATE_ID_WRONG){
+				$call[FRITZBOX_CALL_PROVIDER_ID] = FRITZBOX_PROTOCOL_SIPGATE_ID_CORRECT;
 			}
 			
-			if ($call[5] == FRITZBOX_PROTOCOL_SIPGATE_ID_CORRECT){
+			if ($call[FRITZBOX_CALL_PROVIDER_ID] == FRITZBOX_PROTOCOL_SIPGATE_ID_CORRECT){
 				$providerid = abs(intval(SIPGATE_PROVIDER_ID));
 			}
-			elseif ($call[5] == FRITZBOX_PROTOCOL_DUSNET_ID ){
+			elseif ($call[FRITZBOX_CALL_PROVIDER_ID] == FRITZBOX_PROTOCOL_DUSNET_ID ){
 				$providerid = abs(intval(DUSNET_PROVIDER_ID));
 			}
 			else{
@@ -182,10 +198,20 @@ class callImportManager{
 			foreach ($call as $key=>$value){
 				$call[$key] = mysql_real_escape_string( $value, $this->dbh);
 			}
+	
+			$insert_array = array(
+				'date'				=> $date, 
+				'identity'			=> $call[FRITZBOX_CALL_IDENTITY], 
+				'phonenumber'		=> $call[FRITZBOX_CALL_PHONENUMBER], 
+				'calltype'			=> $call[FRITZBOX_CALL_CALLTYPE], 
+				'usedphone' 		=> $call[FRITZBOX_CALL_USED_PHONE], 
+				'providerstring' 	=> $call[FRITZBOX_CALL_PROVIDER_ID], 
+				'provider_id' 		=> $providerid, 
+				'estimated_duration'=> $duration
+			);
 			
-			$insertstring = "'$date','$call[2]','$call[3]','$call[0]','$call[4]','$call[5]','$providerid','$duration'";
-			$this->tr->addToTrace( 5, $insertstring);
-			$this->insertMonitoredCall( $insertstring );
+			$this->tr->addToTrace( 5, print_r($insert_array, true));
+			$this->insertMonitoredCall( $insert_array );
 		}
 		
 		if (FRITZBOX_SAVE_CALLER_PROTOCOL_TO_EXPORT_DIR){
@@ -203,10 +229,19 @@ class callImportManager{
 	 * tries to insert a call from a call protocol (for example from Fritz!Box) to the database
 	 * if the call already is in the database table, it will not be added another time
 	 */
-	private function insertMonitoredCall( $values ){
-		$query = "INSERT INTO callprotocol (date, identity, phonenumber, calltype, usedphone, providerstring, provider_id, estimated_duration)".
-		$query .= " VALUES (" . $values . ")";
-		$this->tr->addToTrace( 3,"Checking presence of call: $values");
+	private function insertMonitoredCall( $call_array ){
+		$col_list = "";
+		$value_list = "";		
+		foreach ($call_array as $key=>$value){
+			$col_list .= $key . ', ';
+			$value_list .= "'$value', ";		
+		}
+		$col_list = substr($col_list, 0, strlen($col_list) - 2);
+		$value_list = substr($value_list, 0, strlen($value_list) - 2);		
+		
+		$query = "INSERT INTO callprotocol ($col_list)".
+		$query .= " VALUES (" . $value_list . ")";
+		$this->tr->addToTrace( 3,"Checking presence of call: $value_list");
 		
 		$result = mysql_query($query,$this->dbh);
 		if (!$result) {
@@ -219,6 +254,21 @@ class callImportManager{
 		else{
 			$this->tr->addToTrace( 3,"Call added to database.");
 		}
+		
+		//try to update empty identity fields in table user_contacts
+		if ($call_array["identity"] != ""){
+			$update_query = 
+				"UPDATE user_contacts SET identity = '".mysql_real_escape_string($call_array["identity"])."' ".
+				"WHERE phonenumber = '".mysql_real_escape_string($call_array["phonenumber"])."'";
+			$update_result = mysql_query($update_query,$this->dbh);
+			if (!$update_result){
+	    		$this->tr->addToTrace( 2, 'Update statement was incorrect: ' . mysql_errno() . ") ". mysql_error() );
+			}
+			else{
+				$ar = mysql_affected_rows();
+	    		$this->tr->addToTrace( 3, 'Update of user_contacts successful: ' . $ar . " (" . $call_array["identity"] . ")" );
+			}
+		}		
 	}
 	
 	/*
@@ -402,7 +452,7 @@ class callImportManager{
 				"billed = 2, ". // 2 means that it was done without an evn
 				"dateoffset=0, ".
 				"rate_type ='".mysql_real_escape_string($rate_type, $this->dbh)."', ".
-				"billed_duration = CEIL(estimated_duration/60) ".
+				"billed_duration = estimated_duration*60 ".
 			"WHERE ".
 				"provider_id = ".intval($provider_id)." AND ".
 				"ISNULL(rate_type) AND ".
@@ -419,6 +469,53 @@ class callImportManager{
 			$this->tr->addToTrace( 3, "Unbilled flatrate calls have been auto-billed.");
 		}
 	}
+	
+	/*
+	 * tries to update table user_contacts with phonenumbers from table callprotocol that are not yet in there.
+	 * also tries to fill as many identity strings in table user_contacts as possible
+	 * this function may not be needed if identities are only stored in user_contaces in the future and not 
+	 * any more in callprotocol
+	 */
+	
+	public function populateContacts(){
+		
+		$query = "SELECT phonenumber, identity FROM callprotocol WHERE identity != '' GROUP BY phonenumber ORDER BY date DESC";
+		$result = mysql_query($query,$this->dbh);
+		if (!$result) {
+    		$this->tr->addToTrace( 1, 'Invalid query: ' . mysql_errno() . ") ". mysql_error() );
+		}
+		while ($row = mysql_fetch_assoc($result)) {
+			if ($row["identity"] != ""){
+				$update_query = 
+					"UPDATE user_contacts SET identity = '".mysql_real_escape_string($row["identity"])."' ".
+					"WHERE phonenumber = '".mysql_real_escape_string($row["phonenumber"])."'";
+				$update_result = mysql_query($update_query,$this->dbh);
+				if (!$update_result){
+		    		$this->tr->addToTrace( 2, 'Update statement was incorrect: ' . mysql_errno() . ") ". mysql_error() );
+				}
+		    	else {
+		    		//also try to insert
+					$insert_query = 
+						"INSERT INTO user_contacts (phonenumber, identity) VALUES ('".
+							mysql_real_escape_string($row["phonenumber"])."', '".
+							mysql_real_escape_string($row["identity"])."')";
+					$insert_result = mysql_query($insert_query,$this->dbh);
+					if (!$insert_query) {
+			    		$this->tr->addToTrace( 2, 'Error on insert: ' . mysql_errno() . ") ". mysql_error() );
+					}
+					else{
+			    		$this->tr->addToTrace( 3, 'Insert was successful: ' . $insert_query  );
+					}
+				}
+			}
+			
+		}
+		
+		
+		
+	}
+	
+	
 }
 
 ?>

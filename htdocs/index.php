@@ -34,9 +34,13 @@ define('CATEGORY_ANNUAL_OVERVIEW', 	4);
 define('CATEGORY_MIXED_STATS', 		5);
 define('CATEGORY_DATA_IMPORT', 		6);
 define('CATEGORY_CONFIG_CHECK',		7);
+define('CATEGORY_CONTACTS',			8);
 define('CATEGORY_LOGOUT', 			100);
 
 define( 'PATH_TO_SETTINGS', str_replace("htdocs","",dirname(__FILE__)) . 'config/settings.php' );
+
+$cat = isset($_REQUEST["category"]) ? intval($_REQUEST["category"]) : 1;
+$printview = isset($_REQUEST["printview"]) ? (intval($_REQUEST["printview"]) == 1 ? true : false ) : false;
 
 /*
  * check for show stoppers:
@@ -99,6 +103,11 @@ define(CR,"\n");
 	<title>Yaphobia <?php print htmlspecialchars(YAPHOBIA_VERSION); ?></title>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 	<link rel="stylesheet" type="text/css" href="themes/standard/styles.css" />
+<?php 
+	if ($printview){
+		print '<link rel="stylesheet" type="text/css" href="themes/standard/printview.css" />' . CR;
+	}
+?>	
 	
 </head>
 	<body>
@@ -111,31 +120,31 @@ if ( AUTHENTICATION_ENABLED ){
 	$category_menu[CATEGORY_LOGOUT] = 'Logout';
 }
 
-$cat = isset($_REQUEST["category"]) ? intval($_REQUEST["category"]) : 1;
-
-print '<div class="yaph_header"><h1>Yaphobia</h1>';
-
-if (!defined('CLOSE_GATE') && ($cat != CATEGORY_LOGOUT) || !AUTHENTICATION_ENABLED ) {
-
-	$category_menu = array(
-		CATEGORY_MONTHLY_BILLS 		=> 'Monatsrechnungen',
-		CATEGORY_RATE_TYPE_CHECK 	=> 'Tarifcheck',
-		CATEGORY_MATCH_CHECK 		=> 'Buchungscheck',
-		CATEGORY_ANNUAL_OVERVIEW	=> 'Jahresüberblick',
-		CATEGORY_MIXED_STATS 		=> 'Weitere Statistiken',
-		CATEGORY_DATA_IMPORT 		=> 'Datenimport',
-		CATEGORY_CONFIG_CHECK		=> 'Konfigurations-Check'
-	);	
-	print '<p class="category_menu">';
-	foreach ($category_menu as $id=>$desc){
-		$class= ($id == $cat)? ' class="active"' : '';
-		print '<a'.$class.' href="?category='.intval($id).'">'.htmlspecialchars($desc).'</a> ';
+if ($printview === false){ 
+	print '<div class="yaph_header"><h1>Yaphobia</h1>';
+	
+	if (!defined('CLOSE_GATE') && ($cat != CATEGORY_LOGOUT) || !AUTHENTICATION_ENABLED ) {
+	
+		$category_menu = array(
+			CATEGORY_MONTHLY_BILLS 		=> 'Monatsrechnungen',
+			CATEGORY_RATE_TYPE_CHECK 	=> 'Tarifcheck',
+			CATEGORY_MATCH_CHECK 		=> 'Buchungscheck',
+			CATEGORY_ANNUAL_OVERVIEW	=> 'Jahresüberblick',
+			CATEGORY_MIXED_STATS 		=> 'Weitere Statistiken',
+			CATEGORY_CONTACTS			=> 'Kontakte',
+			CATEGORY_DATA_IMPORT 		=> 'Datenimport',
+			CATEGORY_CONFIG_CHECK		=> 'Konfigurations-Check'
+		);	
+		print '<p class="category_menu">';
+		foreach ($category_menu as $id=>$desc){
+			$class= ($id == $cat)? ' class="active"' : '';
+			print '<a'.$class.' href="?category='.intval($id).'">'.htmlspecialchars($desc).'</a> ';
+		}
+		print "</p>";
 	}
-	print "</p>";
+	
+	print "</div><br/>";
 }
-
-print "</div><br/>";
-
 //stop here if a showstopper has occured above
 if (defined('CLOSE_GATE')){
 	print(CLOSE_GATE . "<br/>");
@@ -154,17 +163,16 @@ function actions($category, $dbh){
 	$sermonOptionalSettings = $ih->proofreadOptionalSettings();
 	
 	//check if yaphobia database is empty. if it is empty, offer to create all tables
-	$query="SHOW TABLES";
-	$result = mysql_query( $query, $dbh );
+	$result = mysql_query( 'SHOW TABLES', $dbh );
 	if (mysql_num_rows($result) === 0){
 		print '<div class="welcome"><h2>Welcome!</h2><p>It seems that your MySQL database is completely empty.<br/>You are probably running Yaphobia for the first time.</br> '.
 			'Needed database tables will be created in the database now...</p><pre></div>';
 		$ih = new installHelpers();
-		$ih->createDBTables($dbh);	
+		$ih->createDBTables($dbh);
 		print "</pre>";
 		$category = 0;
 	}
-	elseif (mysql_num_rows($result) < 4){ //FIXME: improve this value with constant or something...
+	elseif (mysql_num_rows($result) < 6){ //FIXME: improve this value with constant or something...
 		print '<div class="welcome"><h2>Welcome!</h2><p>It seems that your MySQL database is missing some tables.<br/> '.
 			'Needed database tables will be created in the database now...</p><pre></div>';
 		$ih = new installHelpers();
@@ -174,8 +182,7 @@ function actions($category, $dbh){
 	}
 	
 	//check if yaphobia callprotocol table is empty
-	$query="SELECT COUNT(*) as calls FROM callprotocol";
-	$result = mysql_query( $query, $dbh );
+	$result = mysql_query( 'SELECT COUNT(*) as calls FROM callprotocol', $dbh );
 	$row = mysql_fetch_assoc($result);
 	if ($row["calls"] == 0){
 		print '<div class="welcome"><h2>Welcome!</h2><p>It seems that the call protocol of Yaphobia is completely empty!<br/>You are probably running Yaphobia for the first time.</br> '.
@@ -194,7 +201,7 @@ function actions($category, $dbh){
 	case CATEGORY_MONTHLY_BILLS:
 		$month = intval($_REQUEST["m"]);
 		$year = intval($_REQUEST["y"]);
-		getMonthlyReport($month,$year, false, $dbh);
+		getMonthlyReport($month,$year, false, true, $dbh);
 		break;
 		
 	case CATEGORY_RATE_TYPE_CHECK:
@@ -208,7 +215,7 @@ function actions($category, $dbh){
 			);
 		print "<h1>Tarife der Provider</h1>";
 		print getTableContent($table_headers, $result, "");
-		getMonthlyReport(0,0, true, $dbh);
+		getMonthlyReport(0,0, true, false, $dbh);
 		break;
 		
 	case CATEGORY_MATCH_CHECK:
@@ -334,8 +341,31 @@ function actions($category, $dbh){
 			'Telefonnummer',
 			'Summe Gespraechskosten',
 			'Summe Gespraechsdauer'
-			);
+		);
 		print "<h1>Outgoing calls: Most expensive communication partners</h1>";
+		print getTableContent($table_headers, $result, "");
+		break;
+		
+	case CATEGORY_CONTACTS:
+
+		$query = "SELECT username FROM users";
+		$result = mysql_query( $query, $dbh );
+		$table_headers = array(
+			'Nr.',
+			'Nutzername'
+		);
+		print "<h1>Users</h1>";
+		print getTableContent($table_headers, $result, "");
+		
+		$query = "SELECT identity, phonenumber, username FROM user_contacts LEFT JOIN users ON related_user=id ORDER BY identity";
+		$result = mysql_query( $query, $dbh );
+		$table_headers = array(
+			'Nr.',
+			'Identitaet',
+			'Telefonnummer',
+			'zugeordneter Nutzer'
+		);
+		print "<h1>Contacts and related users</h1>";
 		print getTableContent($table_headers, $result, "");
 		break;
 		
@@ -440,8 +470,15 @@ function monthpicker($month, $year, $cat_id){
 	print '</form><br/>';
 }
 
-	
-function getMonthlyReport( $month, $year, $all, $dbh){
+/*
+ * 
+ * $all (true / false)
+ * $user_cols (true / false)
+ */
+
+function getMonthlyReport( $month, $year, $all, $user_cols, $dbh){
+
+	global $printview; //FIXME ugly, classify
 	
 	if ($all === false){
 		$month = intval($month);
@@ -451,37 +488,82 @@ function getMonthlyReport( $month, $year, $all, $dbh){
 		if ($year == 0) $year = date('y', time());
 		$year = ($year > 2100 || $year < 2007) ? 2008 : $year; //default value: january
 		$timeperiod = " AND MONTH(c.date) = '".$month."' AND YEAR(c.date) = '".$year."'";
-		monthpicker($month, $year, 1);
+		if ($printview === false){ 
+			monthpicker($month, $year, 1);
+		}
+		$timeframe = htmlspecialchars($month . '/' . $year);
+		
 	}
 	else{
+		$timeframe = '(zeitlich unbegrenzt)';
 		$timeperiod = "";
 	}
 	
+	$users = array();
+	$user_cols_string = "";
+	$sum_user_cols_string = "";
+	$user_cols_count = 1;
+	if ($user_cols === true){
+		//get user list from db
+		$result = mysql_query( 'SELECT id, username from users', $dbh );
+		while ($row = mysql_fetch_assoc($result)) {
+			$users[$row['id']] = $row['username'];
+		}
+		//add user specific cols to sql select statement
+		foreach ($users as $uid=>$username) {
+			$user_cols_string .= ", IF( uc.related_user = ".intval($uid).", CONCAT(c.billed_cost, ' EUR'), '') AS user_col_". intval($uid);
+			$sum_user_cols_string .= ", CONCAT( FORMAT( SUM( IF( uc.related_user = ".intval($uid).", c.billed_cost, 0 )), 2), ' EUR') AS user_col_". intval($uid);
+		}
+		$user_cols_count = count($users);
+	}
+	else{
+		$user_cols_string .= ", u.username as username";
+	}
 	
-	
-	$where = 
-		"FROM callprotocol c ".
+	$from = 
+		" FROM callprotocol c ".
 		"LEFT JOIN provider_details d ON (c.provider_id = d.provider_id) ".
 		"LEFT JOIN provider_rate_types prt ON (c.provider_id = prt.provider_id AND c.rate_type = prt.rate_type ) ".
-//			"WHERE 1=1 ".$timeperiod;  // all calls
-		"WHERE c.calltype='3'".$timeperiod;
+		"LEFT JOIN user_contacts uc ON (c.phonenumber = uc.phonenumber ) ".
+		"LEFT JOIN users u ON (uc.related_user = u.id ) ".
+		"";
+	
+	$where = 
+		" WHERE c.calltype='3'".$timeperiod;
 	 		
 	$query = 
-		"SELECT c.date, c.phonenumber, c.identity, c.estimated_duration, ".
-		"CEIL(c.billed_duration/60) AS billed_duration, ".
-		"CONCAT(c.billed_cost, ' EUR') AS billed_cost, ".
-		"d.provider_name, c.rate_type, " .
-		"IF( ABS( prt.price_per_minute * CEIL( c.billed_duration / 60 ) - c.billed_cost ) = 0, 'OK', 'FEHLER') AS xcheck " .
+		"SELECT".
+		" DATE_FORMAT(c.date,'%d. %H:%i:%s') AS date".
+		", c.phonenumber".
+		", c.identity".
+		", c.estimated_duration".
+		", CEIL(c.billed_duration/60) AS billed_duration".
+		", d.provider_name".
+		", c.rate_type" .
+		", IF( ABS( prt.price_per_minute * CEIL( c.billed_duration / 60 ) - c.billed_cost ) = 0, 'OK', 'FEHLER') AS xcheck ".
+		", IF( ISNULL(u.username), CONCAT(c.billed_cost, ' EUR'), '') AS unbooked_calls";
+	
+	if ($user_cols === false){
+		$query .= ", CONCAT(c.billed_cost, ' EUR') AS billed_cost";
+	}
+	
+	$query .=		
+		$user_cols_string.
+		$from.
 		$where;
 		
 //		print $query . CR;
 	$sum_query = 
-		"SELECT SUM(c.estimated_duration) AS sum_estimated_duration, ".
-		"CEIL(SUM(c.billed_duration)/60) AS sum_billed_duration, ".
-		"CONCAT(FORMAT(SUM(c.billed_cost),2),' EUR') AS sum_cost " . 
+		"SELECT".
+		" SUM(c.estimated_duration) AS sum_estimated_duration".
+		", CEIL(SUM(c.billed_duration)/60) AS sum_billed_duration".
+		", CONCAT(FORMAT(SUM(c.billed_cost),2),' EUR') AS sum_cost" .
+		", CONCAT( FORMAT( SUM( IF( ISNULL(u.username), CONCAT(c.billed_cost, ' EUR'), 0)), 2), ' EUR') AS unbooked_costs". 
+		$sum_user_cols_string. 
+		$from.
 		$where;
 		
-//		print $sum_query. CR;
+		//print $sum_query. CR;
 	
 	$table_headers = array(
 		'Nr.',
@@ -490,42 +572,87 @@ function getMonthlyReport( $month, $year, $all, $dbh){
 		'Identit&auml;t',
 		'Dauer<br/>Sch&auml;tzung',
 		'Dauer<br/>Rechung',
-		'Kosten',
 		'Provider',
 		'Tariftyp',
-		'Check',
-	);
+		'Tarif-<br/>check',
+		'ungebucht'
+		);
 	
-	$timeframe = $all ? " (zeitlich unbegrenzt)" : " $month/$year";
-	print "<h1>Telefonreport$timeframe</h1>";
-	print "<h2>Abgehende Anrufe</h2>";
-
-	//get sum row
+	if ($user_cols === true){	
+		//add user columns to table headers
+		foreach ($users as $uid=>$username) {
+			$table_headers[] = $username;
+		}	
+	}
+	else{
+		$table_headers[] = 'Kosten'; 		
+		$table_headers[] = 'User';
+	}
+	
+	print "<h1>Telefonreport $timeframe</h1>";
+	print "<h2>Outgoing calls</h2>";
+	
+	if ($printview === false && $all === false){ 
+		print "<p><a href=\"index.php?category=".CATEGORY_MONTHLY_BILLS."&printview=1&y=".$year."&m=".$month."\" target=\"_blank\">Print view</a></p>";
+	}
+	//execute sum query and get sum row
 	$result = mysql_query( $sum_query, $dbh );
+	if (mysql_errno() != 0){
+		print mysql_error();
+		die();	
+	}
 	$row = mysql_fetch_assoc($result);
+	$amount_total = $row["sum_cost"];
+	$amount_unbooked = $row["unbooked_costs"];
+	$amount_all_users = 0;
 	$sum_row_content .=  '<tr class="sum-row">'.CR.
 		'<td colspan="4"></td>'.CR.
 		'<td class="right">'.$row["sum_estimated_duration"].'</td>'.CR.
 		'<td class="right">'.$row["sum_billed_duration"].'</td>'.CR.
-		'<td class="right">'.$row["sum_cost"].'</td>'.CR.
-		'<td colspan="3"></td>'.CR."</tr>";
+		'<td colspan="3"></td>'.CR.
+		'<td class="right">'.$amount_unbooked.'</td>'.CR;
+	
+	if ($user_cols === true){
+		foreach ($users as $uid=>$username) {
+			$users_costs = $row["user_col_". $uid];
+			$sum_row_content .= '<td class="right">'.$users_costs.'</td>'.CR;
+			$amount_all_users += floatval($users_costs);
+		}	
+	}
+	else{
+		$sum_row_content .= 
+			'<td class="right">'.$amount_total.'</td>'.CR.		
+			'<td></td>'.CR;
+	}
+	
+	$sum_row_content .= '</tr>';
 
 	$result = mysql_query( $query, $dbh );
 	print getTableContent($table_headers, $result, $sum_row_content);
 	
-	print "<h2>Eingehende Anrufe</h2>";
-	$table_headers = array(
-		'Nr.',
-		'Datum / Uhrzeit',
-		'Telefonnummer',
-		'Identit&auml;t',
-		'Dauer<br/>Sch&auml;tzung',
-		'vermittelnder Provider',
-	);
-	$query = "SELECT c.date, c.phonenumber, c.identity, c.estimated_duration, c.providerstring FROM callprotocol c WHERE calltype='1'".$timeperiod;
-	//print $query;
-	$result = mysql_query( $query, $dbh );
-	print getTableContent($table_headers, $result, "");
+	if ($user_cols === true){	
+		$check = round( floatval($amount_total) - $amount_all_users - floatval($amount_unbooked) , 2);
+		print "<p>Total costs: <b>".$amount_total."</b></p>";
+		print "<p>Cost Check: " . $amount_total . " - " . $amount_all_users . " EUR - ". $amount_unbooked . " = <b>" . $check . " EUR</b> / <b>". ($check != 0 ? 'CHECK UNSUCCESSFUL!' : "CHECK OK")."</b></p>";
+	}
+	
+	
+	if ($printview === false){ 
+		
+		print "<h2>Eingehende Anrufe</h2>";
+		$table_headers = array(
+			'Nr.',
+			'Datum / Uhrzeit',
+			'Telefonnummer',
+			'Identit&auml;t',
+			'Dauer<br/>Sch&auml;tzung',
+			'vermittelnder Provider',
+		);
+		$query = "SELECT c.date, c.phonenumber, c.identity, c.estimated_duration, c.providerstring FROM callprotocol c WHERE calltype='1'".$timeperiod;
+		//print $query;
+		$result = mysql_query( $query, $dbh );
+		print getTableContent($table_headers, $result, "");
+	}
 	
 }
 
@@ -551,6 +678,13 @@ function getTableContent($table_headers, $result, $sum_row_content){
 					$attributes = ' class="correct"';
 				}
 			}
+			if ($key == 'username' && $value == ''){
+				$attributes = ' class="error"';
+				$value = 'unbooked';
+			}
+			if ($key == 'unbooked_calls' && floatval($value) > 0){
+				$attributes = ' class="error"';
+			} 
 			
 			$table_content .= "<td$attributes>" . htmlspecialchars($value) . "</td>".CR;
 	    }
