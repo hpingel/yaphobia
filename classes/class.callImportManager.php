@@ -233,8 +233,12 @@ class callImportManager{
 		$col_list = "";
 		$value_list = "";		
 		foreach ($call_array as $key=>$value){
-			$col_list .= $key . ', ';
-			$value_list .= "'$value', ";		
+			//omit identity field for table callprotocol,
+			//identity is stored in user_contacts
+			if ($key != 'identity'){
+				$col_list .= $key . ', ';
+				$value_list .= "'$value', ";
+			}		
 		}
 		$col_list = substr($col_list, 0, strlen($col_list) - 2);
 		$value_list = substr($value_list, 0, strlen($value_list) - 2);		
@@ -246,29 +250,49 @@ class callImportManager{
 		$result = mysql_query($query,$this->dbh);
 		if (!$result) {
 			if (mysql_errno() == 1062){
-				$this->tr->addToTrace( 3,"Duplicate call was skipped! Is already in database.");
+				$this->tr->addToTrace( 4,"Duplicate call was skipped! Is already in database.");
 			}
 			else
 	    		$this->tr->addToTrace( 1,'Invalid query: ' . mysql_errno() . ") ". mysql_error()); 
 		}
 		else{
-			$this->tr->addToTrace( 3,"Call added to database.");
+			$this->tr->addToTrace( 4,"Call added to database.");
 		}
 		
-		//try to update empty identity fields in table user_contacts
-		if ($call_array["identity"] != ""){
-			$update_query = 
-				"UPDATE user_contacts SET identity = '".mysql_real_escape_string($call_array["identity"])."' ".
-				"WHERE phonenumber = '".mysql_real_escape_string($call_array["phonenumber"])."' AND identity = ''";
-			$update_result = mysql_query($update_query,$this->dbh);
-			if (!$update_result){
-	    		$this->tr->addToTrace( 2, 'Update statement was incorrect: ' . mysql_errno() . ") ". mysql_error() );
-			}
-			else{
-				$ar = mysql_affected_rows();
-	    		$this->tr->addToTrace( 3, 'Update of user_contacts successful: ' . $ar . " (" . $call_array["identity"] . ")" );
-			}
-		}		
+		//try to insert empty identity fields in table user_contacts
+		$insert_query = 
+			"INSERT INTO user_contacts (phonenumber, identity) VALUES ('".
+				mysql_real_escape_string($call_array["phonenumber"])."', '".
+				mysql_real_escape_string($call_array["identity"])."')";
+    	$this->tr->addToTrace( 4, 'Trying to insert identity into user contacts: ' . $insert_query  );
+		$insert_result = mysql_query($insert_query,$this->dbh);
+		if (!$insert_result) {
+    		$this->tr->addToTrace( 1, 'Error on insert: ' . mysql_errno() . ") ". mysql_error() );
+    		if (mysql_errno() == 1062){
+				//try to update empty identity fields in table user_contacts
+				if ($call_array["identity"] != ""){
+					$update_query = 
+						"UPDATE user_contacts SET identity = '".mysql_real_escape_string($call_array["identity"])."' ".
+						"WHERE phonenumber = '".mysql_real_escape_string($call_array["phonenumber"])."' AND identity = ''";
+    				$this->tr->addToTrace( 4, 'Trying to update identity if empty in user contacts: ' . $update_query  );
+					$update_result = mysql_query($update_query,$this->dbh);
+					if (!$update_result){
+			    		$this->tr->addToTrace( 1, 'Error on update attempt: ' . mysql_errno() . ") ". mysql_error() );
+					}
+					elseif (mysql_affected_rows() == 1){
+			    		$this->tr->addToTrace( 4, 'Update of user_contacts successful: ' . $call_array["identity"] );
+					}
+					elseif (mysql_affected_rows() != 1){
+			    		$this->tr->addToTrace( 4, 'Update attempt of user_contacts useless: ' . $call_array["identity"] );
+					}
+				}
+    		}
+		}
+		else{
+    		$this->tr->addToTrace( 4, 'Insert was successful: ' . $insert_result  );
+		}
+		
+
 	}
 	
 	/*
@@ -471,52 +495,6 @@ class callImportManager{
 			$this->tr->addToTrace( 3, "Unbilled flatrate calls have been auto-billed.");
 		}
 	}
-	
-	/*
-	 * tries to update table user_contacts with phonenumbers from table callprotocol that are not yet in there.
-	 * also tries to fill as many identity strings in table user_contacts as possible
-	 * this function may not be needed if identities are only stored in user_contaces in the future and not 
-	 * any more in callprotocol
-	 */
-	
-	public function populateContacts(){
-		
-		$query = "SELECT phonenumber, identity FROM callprotocol WHERE identity != '' GROUP BY phonenumber ORDER BY date DESC";
-		$result = mysql_query($query,$this->dbh);
-		if (!$result) {
-    		$this->tr->addToTrace( 1, 'Invalid query: ' . mysql_errno() . ") ". mysql_error() );
-		}
-		while ($row = mysql_fetch_assoc($result)) {
-			if ($row["identity"] != ""){
-				$update_query = 
-					"UPDATE user_contacts SET identity = '".mysql_real_escape_string($row["identity"])."' ".
-					"WHERE phonenumber = '".mysql_real_escape_string($row["phonenumber"])."'";
-				$update_result = mysql_query($update_query,$this->dbh);
-				if (!$update_result){
-		    		$this->tr->addToTrace( 2, 'Update statement was incorrect: ' . mysql_errno() . ") ". mysql_error() );
-				}
-		    	else {
-		    		//also try to insert
-					$insert_query = 
-						"INSERT INTO user_contacts (phonenumber, identity) VALUES ('".
-							mysql_real_escape_string($row["phonenumber"])."', '".
-							mysql_real_escape_string($row["identity"])."')";
-					$insert_result = mysql_query($insert_query,$this->dbh);
-					if (!$insert_query) {
-			    		$this->tr->addToTrace( 2, 'Error on insert: ' . mysql_errno() . ") ". mysql_error() );
-					}
-					else{
-			    		$this->tr->addToTrace( 3, 'Insert was successful: ' . $insert_query  );
-					}
-				}
-			}
-			
-		}
-		
-		
-		
-	}
-	
 	
 }
 

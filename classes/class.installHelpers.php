@@ -50,11 +50,10 @@ class installHelpers{
 			$query="INSERT INTO calendar_dummy_data SET id = $z";
 			$result = mysql_query( $query, $this->dbh );
 		}
-		
+
 		$query="
 			CREATE TABLE `callprotocol` (
 			  `date` datetime NOT NULL,
-			  `identity` varchar(50) NOT NULL,
 			  `phonenumber` varchar(50) NOT NULL,
 			  `calltype` tinyint(3) unsigned NOT NULL,
 			  `usedphone` varchar(50) NOT NULL,
@@ -67,6 +66,7 @@ class installHelpers{
 			  `rate_type_id` int(11) default NULL,
 			  `billed_duration` int(11) default NULL,
 			  `billed_cost` float(8,4) default NULL,
+			  `user` tinyint(3) unsigned default NULL,
 			  PRIMARY KEY  USING BTREE (`date`,`phonenumber`,`calltype`,`usedphone`,`providerstring`,`provider_id`,`estimated_duration`)
 			) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='fritzbox call monitor data'
 		";
@@ -125,12 +125,14 @@ class installHelpers{
 		";
 		$result = mysql_query( $query, $this->dbh );
 		print "MySQL response: ". mysql_errno() . " " . mysql_error(). "\n";
-		
+
 		$query="
 			CREATE TABLE `user_contacts` (
 			  `phonenumber` VARCHAR(50)  NOT NULL,
 			  `identity` varchar(50) NOT NULL,
 			  `related_user` TINYINT UNSIGNED NOT NULL,
+			  `obsolete` tinyint(1) default NULL,
+			  `typo` tinyint(1) default NULL,
 			  PRIMARY KEY (`phonenumber`)
 			)
 			ENGINE = InnoDB

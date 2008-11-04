@@ -244,10 +244,6 @@ class htmlFrontend{
 	
 		switch ($category){
 		case CATEGORY_MONTHLY_BILLS:
-			/*
-			$this->month = intval($_REQUEST["m"]);
-			$this->year = intval($_REQUEST["y"]);
-			*/
 			$this->getMonthlyReport(false, true);
 			break;
 			
@@ -262,11 +258,15 @@ class htmlFrontend{
 				);
 			print "<h1>Tarife der Provider</h1>";
 			print $this->getTableContent($table_headers, $result, "");
-			$this->getMonthlyReport(0,0, true, false);
 			break;
 			
 		case CATEGORY_MATCH_CHECK:
-			$query="SELECT c.date, c.phonenumber, c.identity, c.estimated_duration, d.provider_name  FROM callprotocol c LEFT JOIN provider_details d ON (c.provider_id=d.provider_id) WHERE c.provider_id > 0 AND c.calltype=3 AND ISNULL(c.billed)";
+			$query=
+				'SELECT c.date, c.phonenumber, uc.identity, c.estimated_duration, d.provider_name '.
+				'FROM callprotocol c '.
+				'LEFT JOIN provider_details d ON c.provider_id=d.provider_id '.
+				"LEFT JOIN user_contacts uc ON c.phonenumber = uc.phonenumber ".
+				'WHERE c.provider_id > 0 AND c.calltype=3 AND ISNULL(c.billed)';
 			$result = mysql_query( $query, $this->dbh );
 			$table_headers = array(
 				'Nr.',
@@ -566,10 +566,17 @@ class htmlFrontend{
 		print "<h1>Telefonreport $timeframe</h1>";
 		
 		$query = 
-			"SELECT c.date, c.phonenumber, uc.identity, CEIL(c.billed_duration/60) AS billed_duration, d.provider_name, c.rate_type, c.billed_cost ".
-			"FROM unmatched_calls c ".
-			"LEFT JOIN user_contacts uc ON (c.phonenumber = uc.phonenumber ) ".
-			"LEFT JOIN provider_details d ON (c.provider_id = d.provider_id) ".
+			"SELECT DATE_FORMAT(c.date,'%d %W') AS date".
+			", DATE_FORMAT(c.date,'%H:%i:%s') AS time".
+			', c.phonenumber'.
+			', uc.identity, '.
+			'CEIL(c.billed_duration/60) AS billed_duration'.
+			', d.provider_name'.
+			', c.rate_type'.
+			', c.billed_cost '.
+			'FROM unmatched_calls c '.
+			'LEFT JOIN user_contacts uc ON (c.phonenumber = uc.phonenumber ) '.
+			'LEFT JOIN provider_details d ON (c.provider_id = d.provider_id) '.
 			"WHERE 1=1 " . $timeperiod;
 		$result = mysql_query( $query, $this->dbh);
 		if (mysql_errno() != 0){
@@ -579,7 +586,8 @@ class htmlFrontend{
 		if (mysql_num_rows($result) > 0){
 			$table_headers = array(
 				'Nr.',
-				'Datum / Uhrzeit',
+				'Datum',
+				'Uhrzeit',
 				'Telefonnummer',
 				'Identity',
 				'Dauer',
@@ -624,8 +632,8 @@ class htmlFrontend{
 			" WHERE c.calltype='3'".$timeperiod;
 		 		
 		$query = 
-			"SELECT".
-			" DATE_FORMAT(c.date,'%d. %H:%i:%s') AS date".
+			"SELECT DATE_FORMAT(c.date,'%d. %b %W') AS date".
+			", DATE_FORMAT(c.date,'%H:%i:%s') AS time".
 			", c.phonenumber".
 			", uc.identity".
 			", c.estimated_duration".
@@ -659,7 +667,8 @@ class htmlFrontend{
 		
 		$table_headers = array(
 			'Nr.',
-			'Datum / Uhrzeit',
+			'Datum',
+			'Uhrzeit',
 			'Telefonnummer',
 			'Identit&auml;t',
 			'Dauer<br/>Sch&auml;tzung',
@@ -697,7 +706,7 @@ class htmlFrontend{
 		$amount_unbooked = $row["unbooked_costs"];
 		$amount_all_users = 0;
 		$sum_row_content .=  '<tr class="sum-row">'.CR.
-			'<td colspan="4"></td>'.CR.
+			'<td colspan="5"></td>'.CR.
 			'<td class="right">'.$row["sum_estimated_duration"].'</td>'.CR.
 			'<td class="right">'.$row["sum_billed_duration"].'</td>'.CR.
 			'<td colspan="3"></td>'.CR.
@@ -732,14 +741,21 @@ class htmlFrontend{
 			print "<h2>Eingehende Anrufe</h2>";
 			$table_headers = array(
 				'Nr.',
-				'Datum / Uhrzeit',
+				'Datum',
+				'Uhrzeit',
 				'Telefonnummer',
 				'Identit&auml;t',
 				'Dauer<br/>Sch&auml;tzung',
 				'vermittelnder Provider',
 			);
 			$query = 
-				"SELECT c.date, c.phonenumber, uc.identity, c.estimated_duration, c.providerstring FROM callprotocol c ".
+				"SELECT DATE_FORMAT(c.date,'%d. %b %W') AS date".
+				", DATE_FORMAT(c.date,'%H:%i:%s') AS time".
+				', c.phonenumber'.
+				', uc.identity'.
+				', c.estimated_duration'.
+				', c.providerstring'.
+				' FROM callprotocol c '.
 				"LEFT JOIN user_contacts uc ON (c.phonenumber = uc.phonenumber ) ".
 				"WHERE calltype='1'".$timeperiod;
 			//print $query;
@@ -781,6 +797,10 @@ class htmlFrontend{
 				}
 				if ($key == 'unbooked_calls' && floatval($value) > 0){
 					$attributes = ' class="error"';
+				} 
+
+				if ($key == 'date' && (stristr($value,"Saturday") !== false || stristr($value,"Sunday") !== false ) > 0){
+					$attributes = ' class="weekend"';
 				} 
 				
 				$table_content .= "<td$attributes>" . htmlspecialchars($value) . "</td>".CR;
