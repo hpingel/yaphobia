@@ -317,7 +317,11 @@ class callImportManager{
 				//delete row
 				$query = "DELETE FROM unmatched_calls WHERE ";
 				foreach ($row as $key => $value){
-					$query .= $key . " = '" . $value . "' AND "; 
+					//avoid quotes for float type!
+					if ( $key != 'billed_cost')
+						$query .= $key . " = '" . $value . "' AND ";
+					else 
+						$query .= $key . " = " . $value . " AND ";
 				}
 				$query = substr($query, 0, strlen($query) - 4); 
 				$this->tr->addToTrace(4, $query);
@@ -398,17 +402,30 @@ class callImportManager{
 			"rate_type_id = '0', ".
 			"billed_duration = '".$x['duration']."', ".
 			"billed_cost = '". $x['billed_cost'] ."'";
-		
-		$where = 
-			"phonenumber = '".$x['number']."' AND ".
-			"ABS(TIMESTAMPDIFF(SECOND, date,'".$x['date']."')) < $tolerance_span_call_begin AND ".
-			"ABS( estimated_duration *60 - ".$x['duration'].") < $tolerance_span_duration ";
-		
-		$whereStart = "WHERE calltype='3' AND provider_id = '".$x['providerid']."' AND "; 
-		$query = "SELECT * FROM callprotocol $whereStart $where"; 
-		//print "Query: $query\n";
-		$result = mysql_query( $query, $this->dbh );
-		$matches = mysql_num_rows($result);
+				
+		$whereStart = "WHERE calltype='3' AND provider_id = '".$x['providerid']."' AND ";
+		$matches = 0;
+		$first_try = true;
+		while ($first_try == true || ($matches > 1 && $tolerance_span_call_begin >= 1)){
+			if ($first_try == false){
+				$tolerance_span_call_begin = abs($tolerance_span_call_begin/2);
+				$this->tr->addToTrace( 2, "Trying to sovle conflict with $matches matches by lowering tolerance value for call begin to $tolerance_span_call_begin"); 			
+			}
+			else
+				$first_try = false;
+			$where = 
+				"phonenumber = '".$x['number']."' AND ".
+				"ABS(TIMESTAMPDIFF(SECOND, date,'".$x['date']."')) < $tolerance_span_call_begin AND ".
+				"ABS( estimated_duration *60 - ".$x['duration'].") < $tolerance_span_duration ";
+			
+			$query = "SELECT * FROM callprotocol $whereStart $where"; 
+			//print "Query: $query\n";
+			$result = mysql_query( $query, $this->dbh );
+			$matches = mysql_num_rows($result);
+		}
+		if ($matches == 1 && $tolerance_span_call_begin != TOLERANCE_CALL_BEGIN){
+			$this->tr->addToTrace( 2, "solved conflict by lowering tolerance value for call begin "); 			
+		}
 		if ($matches > 1){
 			$tr_buffer =  
 				"Not able to match following call in protocol:" . 

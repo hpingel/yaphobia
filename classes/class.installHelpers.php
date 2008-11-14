@@ -67,7 +67,7 @@ class installHelpers{
 			  `billed_duration` int(11) default NULL,
 			  `billed_cost` float(8,4) default NULL,
 			  `user` tinyint(3) unsigned default NULL,
-			  PRIMARY KEY  USING BTREE (`date`,`phonenumber`,`calltype`,`usedphone`,`providerstring`,`provider_id`,`estimated_duration`)
+			  PRIMARY KEY  USING BTREE (`date`,`phonenumber`,`calltype`,`providerstring`,`provider_id`,`estimated_duration`)
 			) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='fritzbox call monitor data'
 		";
 		$result = mysql_query( $query, $this->dbh );
