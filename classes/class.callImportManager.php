@@ -33,7 +33,8 @@ require_once( PATH_TO_YAPHOBIA_CIM. "protocol_provider/fritzbox.php");
 
 class callImportManager{
 	
-	var $dbh,
+	protected
+		$dbh,
 		$tr,
 		$currentMonth,
 		$currentYear;
@@ -76,9 +77,29 @@ class callImportManager{
 		$calllist = $p->getCallerListArray();
 		$credit = $p->getCredit();
 		$this->tr->addToTrace(3, "Current credit: " . $credit);
+		$this->updateProviderCredit($credit, $p->getProviderName());
 		if ($csv_file_flag) $p->createCsvFile();
 		return $calllist;
 	}
+	
+	/*
+	 * write credit value of a provider to database table provider_details
+	 * 
+	 */
+	private function updateProviderCredit($credit, $name){
+		//store credit in database
+		$query = 
+			'UPDATE provider_details SET'.
+			' current_credit = '. floatval($credit) . 
+			', current_credit_timestamp = NOW()'.
+			' WHERE provider_name = \'' . mysql_real_escape_string($name) . '\'' ;
+		$this->tr->addToTrace(3, "updateProviderCredit: " . $query);
+		mysql_query($query, $this->dbh);
+		if (mysql_errno() != 0){
+			print mysql_error();
+			die();	
+		}		
+	}	
 
 	/*
 	 * getDusNetCalls

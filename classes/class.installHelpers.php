@@ -24,7 +24,8 @@
 
 class installHelpers{
 
-	var $dbh;
+	private
+		$dbh;
 	
 	
 	function __construct(){
@@ -79,6 +80,7 @@ class installHelpers{
 			  `provider_id` tinyint(4) NOT NULL,
 			  `provider_name` varchar(50) NOT NULL,
 			  `fritzbox_ident_string` varchar(50) NOT NULL,
+  			  `current_credit` float(4,2),
 			  PRIMARY KEY  (`provider_id`)
 			) ENGINE=InnoDB DEFAULT CHARSET=utf8		
 		";

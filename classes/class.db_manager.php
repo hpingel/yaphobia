@@ -26,7 +26,8 @@ define ('YAPHOBIA_VERSION', '0.0.1-dev');
 
 class dbMan {
 	
-	var $db;
+	protected
+		$db;
 	
 	/*
 	 * constructor, connect to database

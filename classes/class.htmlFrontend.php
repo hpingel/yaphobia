@@ -243,6 +243,7 @@ class htmlFrontend extends reports{
 			break;
 			
 		case CATEGORY_RATE_TYPE_CHECK:
+			$this->outputSQLReport( $this->sqlProviderDetails() );
 			$this->outputSQLReport( $this->sqlRateTypes() );
 			break;
 			
@@ -450,6 +451,7 @@ class htmlFrontend extends reports{
 			print "<p><a href=\"index.php?category=".CATEGORY_MONTHLY_BILLS."&printview=1&y=".$this->year."&m=".$this->month."\" target=\"_blank\">Print view</a></p>";
 		}
 		//get sum row
+		//TODO: it's not good to depend on the column names defined in another class, define an interface!
 		$sum_row_data = $this->sqlPhoneBillSumRow( $timeperiod, $user_cols );
 		$row = $sum_row_data['table'][0];
 		$amount = array(
@@ -519,7 +521,7 @@ class htmlFrontend extends reports{
 			$table_content .= '<tr>'.CR.'<td class="right">'.$nr++. '</td>'.CR;
 			foreach ($table_row as $key=>$value){
 				$attributes = "";
-				if (stristr($key,"cost") !== false || stristr($key, "duration") !== false || stristr($key, "sum") !== false){
+				if (stristr($key,"credit") !== false || stristr($key,"cost") !== false || stristr($key, "duration") !== false || stristr($key, "sum") !== false){
 					$attributes = ' class="right"';
 				}
 				if ($key == "xcheck"){

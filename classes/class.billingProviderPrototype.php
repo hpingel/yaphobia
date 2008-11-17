@@ -37,7 +37,8 @@ define( 'FR_TASK_GETCREDIT', 'FR_TASK_GETCREDIT' );
 
 class billingProviderPrototype extends curllib implements billingProvider {
 	
-	var $providerName,
+	protected
+		$providerName,
 		$callerList,
 		$callerString,
 		$requestDescriptions,
@@ -63,6 +64,10 @@ class billingProviderPrototype extends curllib implements billingProvider {
 	//obsolete, see constructor
 	protected function setProviderName( $name ){
 		$this->providerName = $name;
+	}
+
+	public function getProviderName(){
+		return $this->providerName;
 	}
 	
 	protected function setCreditRegex( $regex ){
@@ -136,7 +141,7 @@ class billingProviderPrototype extends curllib implements billingProvider {
 	}
 	
 	public function getCredit(){
-		return $this->currentCredit;
+		return str_replace(',','.', $this->currentCredit );
 	}
 	
 	public function getCallerListArray(){

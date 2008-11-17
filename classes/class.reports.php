@@ -89,6 +89,33 @@ class reports{
 			$string .= 'AND MONTH('. mysql_real_escape_string($tablename) . '.date) = ' . intval($month) . ' ';
 		return $string;
 	}
+
+	/*
+	 * provider details
+	 * 
+	 */
+	protected function sqlProviderDetails(){
+		$query = 
+			'SELECT provider_name, CONCAT( current_credit, \' EUR\') as credit, current_credit_timestamp '.
+			' FROM provider_details pd';
+		$result = mysql_query( $query, $this->dbh );
+		if (mysql_errno() != 0){
+			print mysql_error();
+			die();	
+		}		
+		$data = array(
+			'title' => 'Provider-Infos',
+			'table' => $this->getFullResultArray($result),
+			'query' => $query, 
+			'headers' => array(
+				'Provider',
+				'Guthaben',
+				'Stand von'
+			),
+			'sum_row' => ''
+		);			
+		return $data;
+	}
 	
 	/*
 	 * sqlRateTypeCheck
@@ -280,7 +307,6 @@ class reports{
 			$month
 		);
 	}
-
 	
 	protected function getUserList(){
 		//TODO: turn this into a singleton object

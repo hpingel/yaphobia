@@ -35,7 +35,8 @@ define( 'FR_IGNORE',     'FR_IGNORE' );
 
 class curllib {
 	
-	var $cookieJarEnabled = false,
+	protected
+		$cookieJarEnabled = false,
 		$baseurl = "",
 		$requestType = "",
 		$postValues = "",
