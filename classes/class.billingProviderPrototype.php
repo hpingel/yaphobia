@@ -29,13 +29,14 @@
  * 
  */
 
-//constants with semantic information 
-define( 'FR_TASK_LOGON', 'FR_TASK_LOGON' ); 
-define( 'FR_TASK_LOGOUT', 'FR_TASK_LOGOUT' );
-define( 'FR_TASK_GETEVNOFMONTH', 'FR_TASK_GETEVNOFMONTH' );
-define( 'FR_TASK_GETCREDIT', 'FR_TASK_GETCREDIT' );
-
 class billingProviderPrototype extends curllib implements billingProvider {
+
+	//constants with semantic information 
+	const 
+		FR_TASK_LOGON ='FR_TASK_LOGON',
+		FR_TASK_LOGOUT =  'FR_TASK_LOGOUT',
+		FR_TASK_GETEVNOFMONTH = 'FR_TASK_GETEVNOFMONTH',
+		FR_TASK_GETCREDIT = 'FR_TASK_GETCREDIT';
 	
 	protected
 		$providerName,
@@ -87,14 +88,14 @@ class billingProviderPrototype extends curllib implements billingProvider {
 	public function logon($user, $password){
 		$this->executeFlexRequest( 
 			"Logon to " . $this->providerName, 
-			$this->requestDescriptions[ FR_TASK_LOGON ], 
+			$this->requestDescriptions[ self::FR_TASK_LOGON ], 
 			array('[[USER]]', '[[PASSWORD]]'), 
 			array( $user, $password)
 		);
 	}
 	
 	public function logout(){
-		$this->executeFlexRequest( "Log out from " . $this->providerName, $this->requestDescriptions[ FR_TASK_LOGOUT ], null, null );
+		$this->executeFlexRequest( "Log out from " . $this->providerName, $this->requestDescriptions[ self::FR_TASK_LOGOUT ], null, null );
 	}
 
 	/*
@@ -106,7 +107,7 @@ class billingProviderPrototype extends curllib implements billingProvider {
 		$this->csvFilenameSuffix = "$year-$month";
 		$response = $this->executeFlexRequest(
 			"get ".$this->providerName." evn for month $year-$month", 
-			$this->requestDescriptions[ FR_TASK_GETEVNOFMONTH ],
+			$this->requestDescriptions[ self::FR_TASK_GETEVNOFMONTH ],
 			array('[[MONTH]]', '[[YEAR]]'),
 			array($month, $year)
 		);
@@ -118,7 +119,7 @@ class billingProviderPrototype extends curllib implements billingProvider {
 		if ($this->creditRegex != ""){
 			$page = $this->executeFlexRequest(
 				"get current credit info from ".$this->providerName."", 
-				$this->requestDescriptions[ FR_TASK_GETCREDIT ],
+				$this->requestDescriptions[ self::FR_TASK_GETCREDIT ],
 				null,
 				null
 			);

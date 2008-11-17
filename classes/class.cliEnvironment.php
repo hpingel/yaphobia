@@ -22,11 +22,17 @@
 *
 */
 
+if (!defined("PATH_TO_YAPHOBIA")) die("Please define constant PATH_TO_YAPHOBIA before including this script.");
+
 require_once( PATH_TO_YAPHOBIA. "classes/class.trace.php");
 require_once( PATH_TO_YAPHOBIA. "classes/class.db_manager.php");
 require_once( PATH_TO_YAPHOBIA. "classes/class.installHelpers.php");
+require_once( PATH_TO_YAPHOBIA. "classes/class.settingsValidator.php");
 
-define( 'PATH_TO_SETTINGS', PATH_TO_YAPHOBIA . 'config/settings.php' );
+//test scripts need different settings files
+if (!defined('PATH_TO_SETTINGS')) 
+	define( 'PATH_TO_SETTINGS', PATH_TO_YAPHOBIA . 'config/settings.php' );
+	
 define( 'UGLY_LINE', "==================================================\n");
 
 class cliEnvironment{
@@ -39,20 +45,6 @@ class cliEnvironment{
 	
 	function __construct( $infotext ){
 		$this->traceObj = new trace('text');
-		$this->ih = new installHelpers();
-		//check for settings file
-		if (file_exists(PATH_TO_SETTINGS)){
-			require_once(PATH_TO_SETTINGS);	
-		}
-		else{
-			die('ERROR: There is no configuration file <b>settings.php!Please copy settings.defaults.php to settings.php and change the options within the file according to your needs.');
-		}
-		//check presence of mandatory settings
-		$sermon = $this->ih->proofreadMandatorySettings();
-		print $sermon;
-		
-		$this->db = new dbMan();
-		$this->dbh = $this->db->getDBHandle();
 		
 		print 
 			UGLY_LINE.
@@ -61,12 +53,32 @@ class cliEnvironment{
 			" You are using Yaphobia version ".YAPHOBIA_VERSION."\n".
 			UGLY_LINE.
 			$infotext.
-			UGLY_LINE;
+			UGLY_LINE;		
+		
+		//check for settings file
+		if (file_exists(PATH_TO_SETTINGS)){
+			require_once(PATH_TO_SETTINGS);	
+		}
+		else{
+			die('ERROR: There is no configuration file settings.php!Please copy settings.defaults.php to settings.php and change the options within the file according to your needs.');
+		}
+		
+		$this->sv = new settingsValidator();
+		//check presence of mandatory settings
+		$sermon = $this->sv->proofreadMandatorySettings();
+		if ($sermon !=''){
+			die($sermon);
+		}
+		
+		$this->db = new dbMan();
+		$this->dbh = $this->db->getDBHandle();
+		$this->ih = new installHelpers($this->dbh);
+		$this->ih->createDBTables();
 	}
 	
 	protected function checkOptionalConfig(){
 		//add default settings for optional settings
-		$sermonOptionalSettings = $this->ih->proofreadOptionalSettings();
+		$sermonOptionalSettings = $this->sv->proofreadOptionalSettings();
 		//print $sermonOptionalSettings;
 	}
 

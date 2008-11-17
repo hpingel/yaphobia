@@ -22,22 +22,26 @@
 *
 */
 
-define('SQL_LEFT_JOIN_PROVIDER_DETAILS_ID','LEFT JOIN provider_details pd ON pd.provider_id = ');
-
-//sql patterns often used
-define('SQL_SNIPPET_TOTALDURATION', "CONCAT(SUM(cpt.estimated_duration) DIV 60, 'h ', SUM(cpt.estimated_duration) MOD 60, 'm') AS total_duration");
-define('SQL_SNIPPET_TOTALBILLEDDURATION',"CONCAT(SUM(CEIL(cpt.billed_duration/60)) DIV 60, 'h ', SUM(CEIL(cpt.billed_duration/60)) MOD 60, 'm') AS total_billed_duration");
-define('SQL_SNIPPET_TOTALCOSTS',"CONCAT(FORMAT(SUM(cpt.billed_cost),2),' EUR') AS total_costs");
 	
 class reports{
 
+	//sql patterns often used
+	const
+		SQL_LEFT_JOIN_PROVIDER_DETAILS_ID = 
+			'LEFT JOIN provider_details pd ON pd.provider_id = ',
+		SQL_SNIPPET_TOTALDURATION = 
+			"CONCAT(SUM(cpt.estimated_duration) DIV 60, 'h ', SUM(cpt.estimated_duration) MOD 60, 'm') AS total_duration",
+		SQL_SNIPPET_TOTALBILLEDDURATION = 
+			"CONCAT(SUM(CEIL(cpt.billed_duration/60)) DIV 60, 'h ', SUM(CEIL(cpt.billed_duration/60)) MOD 60, 'm') AS total_billed_duration",
+		SQL_SNIPPET_TOTALCOSTS = 
+			"CONCAT(FORMAT(SUM(cpt.billed_cost),2),' EUR') AS total_costs";
+	
 	protected
 		$db,
 		$dbh;
 	private
 		$buffered_user_data = array(),
-		$user_list_loaded = false,
-		$db_tables_present = 0;
+		$user_list_loaded = false;
 	
 	/*
 	 * constructor
@@ -60,24 +64,6 @@ class reports{
 		}
 		return $table;
 	}	
-
-	protected function getNumberOfDBTables(){
-		if ($this->db_tables_present === 0){
-			$result = mysql_query( 'SHOW TABLES', $this->dbh );
-			$this->db_tables_present = mysql_num_rows($result);
-		}
-		return $this->db_tables_present;
-	}
-
-	protected function callProtocolIsEmpty(){
-		$result = mysql_query( 'SELECT COUNT(*) as calls FROM callprotocol', $this->dbh );
-		$row = mysql_fetch_assoc($result);
-		if ($row["calls"] == 0)
-			$feedback = true;
-		else
-			$feedback = false;
-		return $feedback;
-	}		
 	
 	/*
 	 * where clause part for defining a time period
@@ -127,7 +113,7 @@ class reports{
 			', prt.rate_type'.
 			', CONCAT( prt.price_per_minute, \' EUR\')'.
 			' FROM provider_rate_types prt'.
-			' '. SQL_LEFT_JOIN_PROVIDER_DETAILS_ID . 'prt.provider_id';
+			' '. self::SQL_LEFT_JOIN_PROVIDER_DETAILS_ID . 'prt.provider_id';
 		$result = mysql_query( $query, $this->dbh );
 		if (mysql_errno() != 0){
 			print mysql_error();
@@ -155,7 +141,7 @@ class reports{
 		$query=
 			'SELECT cp.date, cp.phonenumber, uc.identity, cp.estimated_duration, pd.provider_name'.
 			' FROM callprotocol cp'.
-			' ' . SQL_LEFT_JOIN_PROVIDER_DETAILS_ID . 'cp.provider_id'.
+			' ' . self::SQL_LEFT_JOIN_PROVIDER_DETAILS_ID . 'cp.provider_id'.
 			' LEFT JOIN user_contacts uc ON cp.phonenumber = uc.phonenumber '.
 			' WHERE cp.provider_id > 0 AND cp.calltype=3 AND ISNULL(cp.billed)';
 		$result = mysql_query( $query, $this->dbh );
@@ -202,7 +188,10 @@ class reports{
 		}
 		
 		$query = "SELECT cdm.id, ".
-			"$datedisplay, CONCAT(count(cpt.date), ' Gespraeche') AS sumofcalls, " . SQL_SNIPPET_TOTALDURATION . ", " . SQL_SNIPPET_TOTALBILLEDDURATION . ", " . SQL_SNIPPET_TOTALCOSTS . " ".
+			"$datedisplay, CONCAT(count(cpt.date), ' Gespraeche') AS sumofcalls, " . 
+			self::SQL_SNIPPET_TOTALDURATION . ", " . 
+			self::SQL_SNIPPET_TOTALBILLEDDURATION . ", " . 
+			self::SQL_SNIPPET_TOTALCOSTS . " ".
 			"FROM calendar_dummy_data cdm ".
 			"LEFT JOIN callprotocol cpt ON cdm.id = $mode(cpt.date) AND YEAR(cpt.date)=$year ".
 			"WHERE cdm.id <= $idlimit ".
@@ -269,7 +258,7 @@ class reports{
 	protected function sqlIncomingCallLength( $limit, $year, $month ){
 		return $this->sqlFlexStats( 
 			$title = 'Incoming calls length: Show people that like to talk to us (sorted by total call length)', 
-			$fields = array('Summe Gespraechsdauer' => SQL_SNIPPET_TOTALDURATION),
+			$fields = array('Summe Gespraechsdauer' => self::SQL_SNIPPET_TOTALDURATION),
 			$where = 'cpt.calltype != 3 ',
 			$orderby = 'cpt.estimated_duration',
 			$limit,
@@ -282,8 +271,8 @@ class reports{
 		return $this->sqlFlexStats( 
 			$title = 'Incoming and outgoing calls: Most popular communication partners (sorted by total call length)', 
 			$fields = array(
-				'Summe Gespraechsdauer' => SQL_SNIPPET_TOTALDURATION,
-				'Summe Gespraechskosten' => SQL_SNIPPET_TOTALCOSTS 
+				'Summe Gespraechsdauer' => self::SQL_SNIPPET_TOTALDURATION,
+				'Summe Gespraechskosten' => self::SQL_SNIPPET_TOTALCOSTS 
 			),
 			$where = '1=1',
 			$orderby = 'cpt.estimated_duration',
@@ -297,8 +286,8 @@ class reports{
 		return $this->sqlFlexStats( 
 			$title = 'Outgoing calls: Most expensive communication partners', 
 			$fields = array(
-				'Summe Gespraechskosten' => SQL_SNIPPET_TOTALCOSTS, 
-				'Summe Gespraechsdauer' => SQL_SNIPPET_TOTALDURATION
+				'Summe Gespraechskosten' => self::SQL_SNIPPET_TOTALCOSTS, 
+				'Summe Gespraechsdauer' => self::SQL_SNIPPET_TOTALDURATION
 			),
 			$where = 'cpt.calltype = 3 ',
 			$orderby = 'cpt.billed_cost',
@@ -424,7 +413,7 @@ class reports{
 			', c.billed_cost '.
 			'FROM unmatched_calls c '.
 			'LEFT JOIN user_contacts uc ON c.phonenumber = uc.phonenumber '.
-			SQL_LEFT_JOIN_PROVIDER_DETAILS_ID . 'c.provider_id '.
+			self::SQL_LEFT_JOIN_PROVIDER_DETAILS_ID . 'c.provider_id '.
 			"WHERE 1=1 " . $timeperiod;
 		$result = mysql_query($query , $this->dbh );
 		if (mysql_errno() != 0){
@@ -526,7 +515,7 @@ class reports{
 		$query .= 
 			$user_cols_string . 
 			' FROM callprotocol c '.
-			SQL_LEFT_JOIN_PROVIDER_DETAILS_ID . 'c.provider_id '.
+			self::SQL_LEFT_JOIN_PROVIDER_DETAILS_ID . 'c.provider_id '.
 			'LEFT JOIN provider_rate_types prt ON (c.provider_id = prt.provider_id AND c.rate_type = prt.rate_type ) '.
 			'LEFT JOIN user_contacts uc ON (c.phonenumber = uc.phonenumber ) '.
 			'LEFT JOIN users u ON (uc.related_user = u.id ) '.

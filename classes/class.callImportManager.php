@@ -22,7 +22,7 @@
 *
 */
 
-define( 'PATH_TO_YAPHOBIA_CIM', str_replace("classes","",dirname(__FILE__)) ); 
+define( 'PATH_TO_YAPHOBIA_CIM', dirname(__FILE__) . '/../' ); 
 
 require_once( PATH_TO_YAPHOBIA_CIM. "interfaces/interface.billingProvider.php");
 require_once( PATH_TO_YAPHOBIA_CIM. "classes/class.curllib.php");

@@ -25,35 +25,17 @@
 class installHelpers{
 
 	private
-		$dbh;
-	
-	
-	function __construct(){
-	}
-	
-	
-	public function createDBTables($dbh){
-		$this->dbh = $dbh;
+		$tables = array(
+			'calendar_dummy_data' =>
 		
-		$query="
-			CREATE TABLE `calendar_dummy_data` (
+			"CREATE TABLE `calendar_dummy_data` (
 			  `id` SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			  PRIMARY KEY (`id`)
-			)
-			ENGINE = InnoDB;
-		";
-		$result = mysql_query( $query, $this->dbh );
+			)ENGINE = InnoDB DEFAULT CHARSET=utf8",
+		 
+			'callprotocol' =>
 		
-		print "MySQL response: ". mysql_errno() . " " . mysql_error(). "\n";
-
-		//fillDummyDatesTable
-		for ($z=0; $z < 366; $z++){
-			$query="INSERT INTO calendar_dummy_data SET id = $z";
-			$result = mysql_query( $query, $this->dbh );
-		}
-
-		$query="
-			CREATE TABLE `callprotocol` (
+			"CREATE TABLE `callprotocol` (
 			  `date` datetime NOT NULL,
 			  `phonenumber` varchar(50) NOT NULL,
 			  `calltype` tinyint(3) unsigned NOT NULL,
@@ -69,41 +51,33 @@ class installHelpers{
 			  `billed_cost` float(8,4) default NULL,
 			  `user` tinyint(3) unsigned default NULL,
 			  PRIMARY KEY  USING BTREE (`date`,`phonenumber`,`calltype`,`providerstring`,`provider_id`,`estimated_duration`)
-			) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='fritzbox call monitor data'
-		";
-		$result = mysql_query( $query, $this->dbh );
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='fritzbox call monitor data'",
 
-		print "MySQL response: ". mysql_errno() . " " . mysql_error(). "\n";
-		
-		$query="		
-			CREATE TABLE  `provider_details` (
+			'provider_details' =>
+				
+			"CREATE TABLE  `provider_details` (
 			  `provider_id` tinyint(4) NOT NULL,
 			  `provider_name` varchar(50) NOT NULL,
 			  `fritzbox_ident_string` varchar(50) NOT NULL,
   			  `current_credit` float(4,2),
-			  PRIMARY KEY  (`provider_id`)
-			) ENGINE=InnoDB DEFAULT CHARSET=utf8		
-		";
-		$result = mysql_query( $query, $this->dbh );
+  			  `current_credit_timestamp` datetime default NULL,
+  			  PRIMARY KEY  (`provider_id`)
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8",
 		
-		print "MySQL response: ". mysql_errno() . " " . mysql_error(). "\n";
+			'provider_rate_types' =>
 		
-		
-		$query="		
-			CREATE TABLE `provider_rate_types` (
+			"CREATE TABLE `provider_rate_types` (
 			  `provider_id` tinyint(4) NOT NULL,
 			  `rate_type` varchar(50) NOT NULL,
 			  `price_per_minute` float(8,4) NOT NULL,
 			  `valid_from` datetime NOT NULL,
 			  `valid_to` datetime NOT NULL,
 			  PRIMARY KEY  USING BTREE (`provider_id`,`rate_type`,`valid_from`,`valid_to`)
-			) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Lists rates to different locations including price'		
-		";
-		$result = mysql_query( $query, $this->dbh );
-		print "MySQL response: ". mysql_errno() . " " . mysql_error(). "\n";
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Lists rates to different locations including price'",		
 
-		$query="
-			CREATE TABLE  `unmatched_calls` (
+			'unmatched_calls' =>
+		
+			"CREATE TABLE  `unmatched_calls` (
 			  `provider_id` tinyint(4) NOT NULL,
 			  `date` datetime NOT NULL,
 			  `billed_duration` int(11) NOT NULL,
@@ -111,152 +85,101 @@ class installHelpers{
 			  `billed_cost` float(8,4) NOT NULL,
 			  `phonenumber` varchar(50) NOT NULL,
 			  PRIMARY KEY  USING BTREE (`provider_id`,`date`,`billed_duration`,`rate_type`,`billed_cost`,`phonenumber`)
-			) ENGINE=InnoDB DEFAULT CHARSET=utf8
-		";
-		$result = mysql_query( $query, $this->dbh );
-		print "MySQL response: ". mysql_errno() . " " . mysql_error(). "\n";
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8",
+
+			'users' =>
 		
-		$query="
-			CREATE TABLE `users` (
+			"CREATE TABLE `users` (
 			  `id` SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			  `username` VARCHAR(25)  NOT NULL,
 			  PRIMARY KEY (`id`)
-			)
-			ENGINE = InnoDB
-			CHARACTER SET utf8 COLLATE utf8_general_ci;
-		";
-		$result = mysql_query( $query, $this->dbh );
-		print "MySQL response: ". mysql_errno() . " " . mysql_error(). "\n";
+			) ENGINE = InnoDB CHARACTER SET utf8 COLLATE utf8_general_ci",
 
-		$query="
-			CREATE TABLE `user_contacts` (
+			'user_contacts' =>
+		
+			"CREATE TABLE `user_contacts` (
 			  `phonenumber` VARCHAR(50)  NOT NULL,
 			  `identity` varchar(50) NOT NULL,
 			  `related_user` TINYINT UNSIGNED NOT NULL,
 			  `obsolete` tinyint(1) default NULL,
 			  `typo` tinyint(1) default NULL,
 			  PRIMARY KEY (`phonenumber`)
-			)
-			ENGINE = InnoDB
-			CHARACTER SET utf8 COLLATE utf8_general_ci;
-		";
-		$result = mysql_query( $query, $this->dbh );
-		print "MySQL response: ". mysql_errno() . " " . mysql_error(). "\n";
-
+			) ENGINE = InnoDB CHARACTER SET utf8 COLLATE utf8_general_ci"
+		),
+		$dbh,
+		$db_tables_present = 0;
+	
+	function __construct($dbh){
+		$this->dbh = $dbh;		
 	}
 
-	public function proofreadMandatorySettings(){
-		$sermon = "";
-		
-		$mandatory_constants = array(
-			'YAPHOBIA_DB_NAME',
-			'YAPHOBIA_DB_USER',
-			'YAPHOBIA_DB_PASSWORD',
-			'YAPHOBIA_DB_HOST',
-		);
-
-		$sermon_items = array();		
-		foreach ($mandatory_constants as $const){
-			if (!defined( $const )){
-				$sermon_items[] = $this->pleaseDefineMandatoryConstant($const);
-			}
-			/*
-			else{
-				print "$const: ".constant($const)."\n";
-			}
-			*/
-		}
-		
-		if (count($sermon_items) > 0){
-			$sermon .= "<p>Mandatory constants are missing in your configuration. Please add them to /config/settings.php:</p>\n<ul>\n";
-			foreach ($sermon_items as $item){
-				$sermon .= "<li>".$item."</li>\n";		
-			}
-			$sermon .= "</ul>\n";
-		}
-		if ($sermon != ""){
-			$sermon = "<h1>Please check your Yaphobia configuration settings</h1>\n<p>All configuration settings are managed in <b>/config/settings.php</b></p>" . $sermon;
-		}
-		
-		return $sermon;		
+	public function getDBTableNames(){
+		return array_keys($this->tables);
 	}
 	
-	public function proofreadOptionalSettings(){
-		$sermon = "";
+	public function getMandatoryNumberOfDBTables(){
+		return count($this->tables);
+	}
+	
+	public function getNumberOfDBTables(){
+		if ($this->db_tables_present === 0){
+			$result = mysql_query( 'SHOW TABLES', $this->dbh );
+			$this->db_tables_present = mysql_num_rows($result);
+		}
+		return $this->db_tables_present;
+	}
 
-		$pathToYaphobia = str_replace("classes","",dirname(__FILE__));
-		$optional_constants = array(
-			'TRACE_LEVEL' => 2, //0-5
-			'PATH_TO_YAPHOBIA' => $pathToYaphobia,
-			'YAPHOBIA_COOKIEJAR_DIR'  => $pathToYaphobia. 'cookiejar/',
-			'YAPHOBIA_DATA_EXPORT_DIR' => $pathToYaphobia. 'data_export/',
-			'YAPHOBIA_WEB_INTERFACE_PASSWORD' => "", //authentication is disabled
-		
-			'FRITZBOX_HOSTNAME' => 'fritz.box',
-			'FRITZBOX_PASSWORD' => '',
-			'FRITZBOX_SAVE_CALLER_PROTOCOL_TO_EXPORT_DIR' => false,
-		
-			'AUTOBILL_REMAINING_FLATRATE_CALLS' => false,
-			'FLATRATE_PROVIDER_ID' => 0,
-			'TOLERANCE_CALL_BEGIN'=> 120, //in seconds
-			'TOLERANCE_CALL_DURATION' => 180, //in seconds
-		
-			//FIXME: the following stuff will be reorganized soon into sub-arrays 
-		
-			'SIPGATE_ACTIVE' => false,
-			'SIPGATE_PROVIDER_ID' => 1,
-			'SIPGATE_USERNAME' => '', 
-			'SIPGATE_PASSWORD' => '',
-			'SIPGATE_SAVE_CSV_DATA_TO_WORKDIR' => false,
-		
-			'DUSNET_ACTIVE' => false,
-			'DUSNET_PROVIDER_ID' => 2,
-			'DUSNET_SIPACCOUNT' => '', 
-			'DUSNET_USERNAME' => '', 
-			'DUSNET_PASSWORD' => '',
-			'DUSNET_SAVE_CSV_DATA_TO_WORKDIR' => false,
-			'FRITZBOX_PROTOCOL_SIPGATE_ID_CORRECT' => '',
-			'FRITZBOX_PROTOCOL_DUSNET_ID' => ''
-		);
-
-		$sermon_items = array();		
-		foreach ($optional_constants as $const => $default){
-			if (!defined( $const )){
-				$sermon_items[] = $this->pleaseDefineOptionalConstant($const, $default);
-				define( $const, $default);
+	protected function tableIsEmpty( $table ){
+		$result = mysql_query( 'SELECT COUNT(*) as rows FROM '.$table, $this->dbh );
+		$row = mysql_fetch_assoc($result);
+		if ($row["rows"] == 0)
+			$feedback = true;
+		else
+			$feedback = false;
+		return $feedback;
+	}
+	
+	public function callProtocolIsEmpty(){
+		return $this->tableIsEmpty( 'callprotocol' );
+	}
+	
+	public function deleteAllDBTables(){
+		foreach ($this->getDBTableNames() as $table){
+			print "Trying to delete $table :";
+			mysql_query( 'DROP TABLE ' . $table, $this->dbh);
+			if (mysql_errno() == 0){
+				print "OK\n";
 			}
 			else{
-				$sermon_items[] = $this->optionalConstantExists($const);
+				print "Could not drop table due to MySQL error: ". mysql_errno() . " " . mysql_error(). "\n";
+			}			
+		}
+		$this->db_tables_present = 0; // reset, so that it can be determined again
+	}
+	
+	public function createDBTables(){
+		
+		if ($this->getMandatoryNumberOfDBTables() != $this->getNumberOfDBTables()){
+			foreach ($this->tables as $table => $def){
+				print "Trying to create table '$table': ";
+				$result = mysql_query( $def, $this->dbh );
+				if (mysql_errno() == 0){
+					print "Table was created.\n";
+				}
+				else
+					print "Could not create table due to MySQL error: ". mysql_errno() . " " . mysql_error(). "\n";
 			}
 		}
-
-		if (count($sermon_items) > 0){
-			$sermon .= "<p>To change the situation, please adjust the content of <b>/config/settings.php</b></p><ul>\n";
-			foreach ($sermon_items as $item){
-				$sermon .= "<li>".$item."</li>\n";		
-			}
-			$sermon .= "</ul>\n";
+		else{
+			//print "All ".$this->getMandatoryNumberOfDBTables()." database tables seem to be existing.\n";
 		}
-		
-		return $sermon;
-		
-	}
-	
-	private function pleaseDefineMandatoryConstant($const){
-		return "Constant <b>'".htmlspecialchars($const)."'</b> is not defined. Sorry, but setting this constant is mandatory to run Yaphobia.";
-		
-	}
-	
-	private function pleaseDefineOptionalConstant($const, $default){
-		return "<b>Undefined</b>: Constant '<b>".htmlspecialchars($const)."</b>' is being set to default value '<b>".htmlspecialchars($default)."</b>'.";
-		
-	}
-	
-	private function optionalConstantExists($const){
-		$value = constant($const);
-		if (stristr($const, 'PASSWORD') !== false) $value = '*** SECRET PASSWORD ***';
-		if (stristr($const, 'USERNAME') !== false) $value = '*** SECRET USERNAME ***';
-		return "<b>Found</b>: Constant '<b>".htmlspecialchars($const)."</b>' with value '<b>".$value."</b>'.";
+		//fillDummyDatesTable
+		if ($this->tableIsEmpty( 'calendar_dummy_data' )){
+			for ($z=0; $z < 366; $z++){
+				$query="INSERT INTO calendar_dummy_data SET id = $z";
+				$result = mysql_query( $query, $this->dbh );
+			}
+		}
 	}
 }
 

@@ -22,7 +22,7 @@
 *
 */
 
-define( 'PATH_TO_YAPHOBIA', str_replace("cli","",dirname(__FILE__)) );
+define( 'PATH_TO_YAPHOBIA', dirname(__FILE__) . '/../' );
 require_once( PATH_TO_YAPHOBIA. "classes/class.cliEnvironment.php");
 require_once( PATH_TO_YAPHOBIA. "classes/class.callImportManager.php");
 

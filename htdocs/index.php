@@ -22,12 +22,13 @@
 *
 */
 
-define( 'PATH_TO_SETTINGS', str_replace("htdocs","",dirname(__FILE__)) . 'config/settings.php' );
+define( 'PATH_TO_SETTINGS', dirname(__FILE__). '/../config/settings.php' );
 
 require_once( "../classes/class.trace.php");
 require_once( "../classes/class.db_manager.php");
 require_once( "../classes/class.callImportManager.php");
 require_once( "../classes/class.installHelpers.php");
+require_once( "../classes/class.settingsValidator.php");
 require_once( "../classes/class.reports.php");
 require_once( "../classes/class.htmlFrontend.php");
 

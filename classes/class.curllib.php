@@ -22,18 +22,20 @@
 *
 */
 
-define( 'FR_TYPE',       'FR_TYPE' );
-define( 'FR_TYPE_GET',   'FR_TYPE_GET' ); 
-define( 'FR_TYPE_POST',  'FR_TYPE_POST' );
-define( 'FR_TYPE_BINARY',  'FR_TYPE_BINARY' );
-
-define( 'FR_PATH',       'FR_PATH' );
-define( 'FR_POSTVARS',   'FR_POSTVARS' ); 
-define( 'FR_CHECKS',     'FR_CHECKS' );
-define( 'FR_COMMENT',    'FR_COMMENT' ); 
-define( 'FR_IGNORE',     'FR_IGNORE' ); 
 
 class curllib {
+
+	const
+		FR_TYPE = 'FR_TYPE',
+		FR_TYPE_GET = 'FR_TYPE_GET', 
+		FR_TYPE_POST = 'FR_TYPE_POST',
+		FR_TYPE_BINARY = 'FR_TYPE_BINARY',
+		
+		FR_PATH = 'FR_PATH',
+		FR_POSTVARS = 'FR_POSTVARS', 
+		FR_CHECKS = 'FR_CHECKS',
+		FR_COMMENT = 'FR_COMMENT', 
+		FR_IGNORE = 'FR_IGNORE'; 
 	
 	protected
 		$cookieJarEnabled = false,
@@ -102,12 +104,12 @@ class curllib {
 	protected function executeFlexRequest( $comment, $request, $search, $replace){
 		$response = "";
 		if (is_array( $request)){
-			if ( !array_key_exists( FR_TYPE, $request) && isset($request[0]) && is_array( $request[0] )) {
+			if ( !array_key_exists( self::FR_TYPE, $request) && isset($request[0]) && is_array( $request[0] )) {
 				$this->tr->addToTrace(4, "detected multiple requests: ". count($request));
 				
 				foreach ($request as $single_request){
-					$single_request[ FR_COMMENT ] = str_replace($search, $replace, $single_request[ FR_COMMENT ]);
-					$response .= $this->executeFlexRequest( $single_request[ FR_COMMENT ], $single_request, $search, $replace);
+					$single_request[ self::FR_COMMENT ] = str_replace($search, $replace, $single_request[ self::FR_COMMENT ]);
+					$response .= $this->executeFlexRequest( $single_request[ self::FR_COMMENT ], $single_request, $search, $replace);
 				}
 			}
 			else{
@@ -132,18 +134,18 @@ class curllib {
 	
 	protected function executeSingleFlexRequest( $comment, $request){
 		$this->tr->addToTrace(4, print_r($request, true));
-		switch ($request[ FR_TYPE ]) {
-		case FR_TYPE_GET:
-		    $response = $this->getRequest ($comment, $request[ FR_PATH ]);
+		switch ($request[ self::FR_TYPE ]) {
+		case self::FR_TYPE_GET:
+		    $response = $this->getRequest ($comment, $request[ self::FR_PATH ]);
 			break;
-		case FR_TYPE_POST:
-		    $response = $this->postRequest ($comment, $request[ FR_POSTVARS ], $request[ FR_PATH ]);
+		case self::FR_TYPE_POST:
+		    $response = $this->postRequest ($comment, $request[ self::FR_POSTVARS ], $request[ self::FR_PATH ]);
 		    break;
-		case FR_TYPE_BINARY:
-		    $response = $this->binaryTransfer ($comment, $request[ FR_PATH ]);
+		case self::FR_TYPE_BINARY:
+		    $response = $this->binaryTransfer ($comment, $request[ self::FR_PATH ]);
 			break;
 		}
-		if ($request[ FR_IGNORE ] == true){
+		if ($request[ self::FR_IGNORE ] == true){
 			$response = "";
 			$this->tr->addToTrace(3, "Content of this request will not be added to resultset.");
 		} 
