@@ -258,7 +258,7 @@ class reports{
 	
 	protected function getUserList(){
 		//TODO: turn this into a singleton object
-		if (!$user_list_loaded){
+		if (!$this->user_list_loaded){
 			$query = "SELECT * FROM users";
 			$result = mysql_query( $query, $this->dbh );
 			if (mysql_errno() != 0){
@@ -266,7 +266,7 @@ class reports{
 				die();	
 			}
 			$this->buffered_user_data =  $this->getFullResultArray($result);
-			$user_list_loaded = true;
+			$this->user_list_loaded = true;
 			
 		}
 		return $this->buffered_user_data;

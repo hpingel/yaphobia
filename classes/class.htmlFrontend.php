@@ -268,7 +268,7 @@ class htmlFrontend extends reports{
 			$this->cat = 0;
 		}
 		//check if yaphobia callprotocol table is empty
-		if ($this->importType == 0 && $ih->callProtocolIsEmpty()){
+		if ($this->importType == 0 && $ih->callProtocolIsEmpty() && $this->cat != self::CATEGORY_CONFIG_CHECK){
 			print '<div class="welcome"><h2>Welcome!</h2><p>It seems that the call protocol of Yaphobia is completely empty!<br/>You are probably running Yaphobia for the first time.</br> '.
 				'Please import call protocol data into Yaphobia!</p></div>';
 				$this->cat = 6;
@@ -445,13 +445,14 @@ class htmlFrontend extends reports{
 			print "</p>";
 			print "</fieldset>";
 		}
-		if (DUSNET_ACTIVE)
+		if (DUSNET_ACTIVE){
 			print "<fieldset><legend>dus.net</legend>";
 			print $import_link_start . '4">EVN des aktuellen Monats von dus.net importieren' . $import_link_end;
 			print "<p>EVN eines Monats importieren: ";
 			$this->monthPickerForm( '<input type="hidden" name="import_type" value="4">' );
 			print "</p>";
-			print "</fieldset>";		
+			print "</fieldset>";
+        }
 	} 
 	
 	/*
@@ -749,8 +750,9 @@ class htmlFrontend extends reports{
 				print $this->getTableContent($headers, $rm->getQueryResultArray(), $rm->getSumRow());
 			}
 		}
-		print $this->xmlLink($rm->getXmlId());
-		
+  		if ($this->use_extjs){
+    		print $this->xmlLink($rm->getXmlId());
+	    }	
 	}
 	
 	
