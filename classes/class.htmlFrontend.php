@@ -741,7 +741,6 @@ class htmlFrontend extends reports{
 			$this->addExtJsGrid( $rm );
 		}
 		else{
-			print getType($rm->getColumnHeaders());
 			$rm->executeQuery();
 			if (count($rm->getQueryResultArray()) > 0){
 				print '<h1>'.$rm->getTitle().'</h1>';
