@@ -22,7 +22,7 @@
 *
 */
 
-define(CR,"\n");
+define('CR',"\n");
 
 class htmlFrontend extends reports{
 
@@ -89,6 +89,7 @@ class htmlFrontend extends reports{
 		}
 		else{
 			$close_gate = '<div class="welcome"><p>ERROR: There is no configuration file <b>settings.php</b>!<br/>Please copy <b>settings.defaults.php</b> to <b>settings.php</b> and change the options within the file according to your needs.</p></div>';
+            $this->authentication_enabled = true; //this should prevent category menu from being displayed
 		}
 		
 		$this->importRequestVars(); // needed for correct rendering of categorie_menu
@@ -99,7 +100,7 @@ class htmlFrontend extends reports{
 			//render yaphobia header if not in printview 
 			if ($this->printview === false){ 
 				print '<div class="yaph_header"><h1>Yaphobia</h1>';
-				if ($this->close_gate == '' && ($this->cat != self::CATEGORY_LOGOUT) || !$this->authentication_enabled ) {
+				if ($close_gate == '' && ($this->cat != self::CATEGORY_LOGOUT) || !$this->authentication_enabled ) {
 					$this->render_categorie_menu();
 				}
 				print "</div><br/>";
