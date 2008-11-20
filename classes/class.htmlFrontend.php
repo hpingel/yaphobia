@@ -39,6 +39,7 @@ class htmlFrontend extends reports{
 	
 	private
 		$use_extjs = false,
+        $debug = false,
 		$authentication_enabled = false,
 		$printview,
 		$cat,
@@ -750,7 +751,7 @@ class htmlFrontend extends reports{
 				print $this->getTableContent($headers, $rm->getQueryResultArray(), $rm->getSumRow());
 			}
 		}
-  		if ($this->use_extjs){
+  		if ($this->use_extjs && $this->debug == true){
     		print $this->xmlLink($rm->getXmlId());
 	    }	
 	}
@@ -770,6 +771,8 @@ class htmlFrontend extends reports{
 			$gridColumns .= "					".
 							"{header: '".$columndata['title']."',  align: 'left', width: ".$stdWidth.", dataIndex: '".$fieldname."', sortable: true},". CR;
 		}
+        $fieldsMapping = substr($fieldsMapping, 0, strlen($fieldsMapping) - 2) . CR;
+        $gridColumns = substr($gridColumns, 0, strlen($gridColumns) - 2) . CR;
 		
 		$storeName = 'store_'. $rm->getXmlId();
 		
@@ -800,7 +803,7 @@ class htmlFrontend extends reports{
 			        width: ".(count($rm->getColumns())*$stdWidth + 30).",
 			        height: 200,
 			        title:'".$rm->getTitle()."',
-			        frame:true,
+			        frame:true
 			    });
 			    ".$storeName.".load();";
 
