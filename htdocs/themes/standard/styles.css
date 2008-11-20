@@ -33,47 +33,49 @@
 			font-size: 12px;
 		}
 		
-		table{
+		table.yap_std{
 			border-collapse: collapse;
 			margin-left: auto;
 			margin-right: auto;
 			text-align: left;
 		}
 		
-		td, th{
+		table.yap_std td,
+		table.yap_std th{
 			border: 1px solid grey;
 			padding: 3px;
 		}
 		
-		th{
+		table.yap_std th{
 			font-size: 10px;
 		}
 		
-		th{
+		table.yap_std th{
 			background-color: lightgrey;
 		}
 		
-		tr.sum-row{
+		table.yap_std tr.sum-row{
 			font-weight: bold;
 		}
 		
-		td.right {
+		table.yap_std td.right {
 			text-align: right;
 			white-space: nowrap;
 		}
 		
-		td.error{
+		table.yap_std td.error{
 			background-color: pink;
 			white-space: nowrap;
 		}
-		td.correct{
+		
+		table.yap_std td.correct{
 			background-color: lightgreen;
 		}
 		
-		td.weekend{
+		table.yap_std td.weekend{
 			background-color: lightgrey;
 		}
-		
+				
 		p.category_menu a{
 			font-size: 14px;
 			text-decoration: none;
@@ -110,6 +112,12 @@
 
 		div.content_wrap{
 			text-align: center;
+		}
+		
+		/* temporary hacking extjs x-grid-panel*/
+		div.x-grid-panel{
+			margin-left: auto;
+			margin-right: auto;
 		}
 
 		div.welcome{

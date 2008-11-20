@@ -29,6 +29,7 @@ require_once( "../classes/class.db_manager.php");
 require_once( "../classes/class.callImportManager.php");
 require_once( "../classes/class.installHelpers.php");
 require_once( "../classes/class.settingsValidator.php");
+require_once( "../classes/class.reportManager.php");
 require_once( "../classes/class.reports.php");
 require_once( "../classes/class.htmlFrontend.php");
 

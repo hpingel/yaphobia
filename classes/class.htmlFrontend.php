@@ -38,6 +38,7 @@ class htmlFrontend extends reports{
 		CATEGORY_LOGOUT = 		  100;
 	
 	private
+		$use_extjs = false,
 		$authentication_enabled = false,
 		$printview,
 		$cat,
@@ -45,6 +46,9 @@ class htmlFrontend extends reports{
 		$month,
 		$importType,		
 		$tr,
+		$xmldata,
+		$extJsScriptArea = '',
+		$extJsBodyArea = '',
 		$months = array(
 			'Januar',
 			'Februar',
@@ -87,35 +91,48 @@ class htmlFrontend extends reports{
 			$close_gate = '<div class="welcome"><p>ERROR: There is no configuration file <b>settings.php</b>!<br/>Please copy <b>settings.defaults.php</b> to <b>settings.php</b> and change the options within the file according to your needs.</p></div>';
 		}
 		
-		$this->htmlHeader();
-		
 		$this->importRequestVars(); // needed for correct rendering of categorie_menu
-				
-		//render yaphobia header if not in printview 
-		if ($this->printview === false){ 
-			print '<div class="yaph_header"><h1>Yaphobia</h1>';
-			if ($this->close_gate == '' && ($this->cat != self::CATEGORY_LOGOUT) || !$this->authentication_enabled ) {
-				$this->render_categorie_menu();
-			}
-			print "</div><br/>";
-		}
 		
-		//stop here if a showstopper has occured above
-		if ($close_gate != ''){
-			print($close_gate . "<br/>");
+		if ($this->xmldata == 0){
+			
+			$this->htmlHeader();
+			//render yaphobia header if not in printview 
+			if ($this->printview === false){ 
+				print '<div class="yaph_header"><h1>Yaphobia</h1>';
+				if ($this->close_gate == '' && ($this->cat != self::CATEGORY_LOGOUT) || !$this->authentication_enabled ) {
+					$this->render_categorie_menu();
+				}
+				print "</div><br/>";
+			}
+			//stop here if a showstopper has occured above
+			if ($close_gate != ''){
+				print($close_gate . "<br/>");
+			}
+			else{
+				parent::__construct(); //connect to database
+				$this->installHelperChecks();
+				$this->actions();	
+			}
+			$this->htmlFooter();
+			
 		}
 		else{
-			parent::__construct(); //connect to database
-			$this->installHelperChecks();
-			$this->actions();	
+			header("Content-type: text/xml");
+			if ($close_gate != ''){
+				print($close_gate . "<br/>");
+			}
+			else{
+				parent::__construct(); //connect to database
+				//$this->installHelperChecks();
+				$this->xmlActions();	
+			}
 		}
-
-		$this->htmlFooter();
-		
+	
 	} // end of constructor
 
 	protected function importRequestVars(){
 		//import request vars and sanititze them
+		$this->xmldata  = isset($_REQUEST['xmldata']) ? intval($_REQUEST['xmldata']) : 0;
 		$this->cat 		= isset($_REQUEST['category']) ? intval($_REQUEST['category']) : 1;
 		$this->printview= isset($_REQUEST['printview']) ? (intval($_REQUEST['printview']) == 1 ? true : false ) : false;
 		$this->year 	= isset($_REQUEST['y']) ? intval($_REQUEST['y']) : date('Y', time());
@@ -125,6 +142,8 @@ class htmlFrontend extends reports{
 		//range check (month value 0 is ok, means whole year)
 		$this->month 	= ($this->month > 12 || $this->month < 0) ? date('m', time()) : $this->month;
 		$this->year 	= ($this->year > 2100 || $this->year < 2000) ? date('Y', time()) : $this->year;
+		$this->xmldata  = ($this->xmldata > 1 || $this->xmldata < 0) ? 1 : $this->xmldata; 
+		//
 	}
 	
 	
@@ -187,11 +206,22 @@ class htmlFrontend extends reports{
 	 * 
 	 */
 	private function htmlHeader(){
-		$printview_css = '';
+		$additional_headers = '';
+		$additional_body_content = '';
 		if ($this->printview){
-			$printview_css = '	<link rel="stylesheet" type="text/css" href="themes/standard/printview.css" />' . CR;
+			$additional_headers = '	<link rel="stylesheet" type="text/css" href="themes/standard/printview.css" />' . CR;
 		}
-		//header("Content-type: text/xml"); //disabled until we solved some problems
+		$additional_headers .= '<link rel="stylesheet" type="text/css" href="themes/standard/styles.css" />'.CR;
+		if ($this->use_extjs){
+			$additional_headers .= '
+				<link rel="stylesheet" type="text/css" href="ext-2.2/resources/css/ext-all.css" />
+				<script type="text/javascript" src="ext-2.2/adapter/ext/ext-base.js"></script>
+				<script type="text/javascript" src="ext-2.2/ext-all.js"></script>
+				';
+
+		}
+		
+		//header("Content-type: text/xml"); //disabled until we solved some problems with UTF-8
 		print 
 			'<?xml version="1.0" encoding="utf-8"?>'.CR.
 			'<!DOCTYPE html'.CR.
@@ -202,10 +232,10 @@ class htmlFrontend extends reports{
 			'<head>'.CR.
 			'	<title>Yaphobia ' . htmlspecialchars(YAPHOBIA_VERSION) . '</title>' . CR.
 			'	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />'.CR.
-			'	<link rel="stylesheet" type="text/css" href="themes/standard/styles.css" />'.CR.
-			$printview_css.
+			$additional_headers.
 			'</head>'.CR.
 			'<body>'.CR.
+			$additional_body_content.CR.
 			'	<div class="content_wrap">'.CR;
 	}
 
@@ -257,7 +287,22 @@ class htmlFrontend extends reports{
 		$sermonOptionalSettings = $sv->proofreadOptionalSettings();
 		switch ($this->cat){
 		case self::CATEGORY_MONTHLY_BILLS:
-			$this->getMonthlyReport(false, true);
+			$timeperiod = $this->sqlWhereTimeperiod( 'c', $this->month, $this->year);
+			if ($this->xmldata === 0){
+				print '<h1>Telefonreport '.$this->humanReadableTimeframe().'</h1>';
+			}
+			if ($this->printview === false){ 
+				$this->monthFlicker();
+				$this->outputSQLReport( $this->sqlUnmatchedBilledOrphans( $timeperiod ));
+				if ($this->printview === false){ 
+					print "<p><a href=\"index.php?category=".self::CATEGORY_MONTHLY_BILLS."&printview=1&y=".$this->year."&m=".$this->month."\" target=\"_blank\">Print view</a></p>";
+				}
+				$this->getMonthlyReport(true, $timeperiod);
+				$this->outputSQLReport( $this->sqlIncomingCalls( $timeperiod ));			
+			}
+			else{
+				$this->getMonthlyReport(true);
+			}
 			break;
 			
 		case self::CATEGORY_PROVIDERS_RATES:
@@ -274,9 +319,9 @@ class htmlFrontend extends reports{
 			$this->month = 0; //force whole year
 			$this->monthPickerForm('');
 			print '<h1>'.$this->humanReadableTimeframe() . '<h1>';
-			$this->outputSQLReport( $this->sqlAnnualOverview( 'MONTH',      $this->year ) );
-			$this->outputSQLReport( $this->sqlAnnualOverview( 'WEEKOFYEAR', $this->year ) );
-			$this->outputSQLReport( $this->sqlAnnualOverview( 'DAYOFYEAR',  $this->year ) );
+			$this->outputSQLReport( $this->sqlAnnualOverview( self::XML_REPORT_ANNUAL_OVERVIEW_MONTH, $this->year ) );
+			$this->outputSQLReport( $this->sqlAnnualOverview( self::XML_REPORT_ANNUAL_OVERVIEW_WEEK,  $this->year ) );
+			$this->outputSQLReport( $this->sqlAnnualOverview( self::XML_REPORT_ANNUAL_OVERVIEW_YEAR,  $this->year ) );
 			break;
 			
 		case self::CATEGORY_MIXED_STATS:
@@ -314,8 +359,74 @@ class htmlFrontend extends reports{
 			}
 			break;
 		}
+		
+		if ($this->use_extjs) $this->flushExtJsArea();
 	}
-
+	
+	private function xmlLink( $xmlaction ){
+		return '<p><a href="'.$this->xmlURI( $xmlaction ).'" target="_blank">XML view</a></p>';
+	}
+	
+	private function xmlURI( $xmlaction ){
+		return 'index.php?xmldata=1&category='.$xmlaction.'&y='.$this->year.'&m='.$this->month;
+	}
+	
+	/*
+	 * xml actions
+	 */
+	protected function xmlActions(){
+		$limit = 20;
+		$timeperiod = $this->sqlWhereTimeperiod( 'c', $this->month, $this->year);			
+		
+		switch ($this->cat){
+		case parent::XML_REPORT_MONTHLY_BILL:
+			$this->outputXMLReport( $this->sqlPhoneBill( $timeperiod, true ) );
+			break;
+		case parent::XML_REPORT_UNMATCHED_BILLED_ORPHANS:
+			$this->outputXMLReport( $this->sqlUnmatchedBilledOrphans( $timeperiod ) );
+			break;
+		case parent::XML_REPORT_INCOMING_CALLS:
+			$this->outputXMLReport( $this->sqlIncomingCalls( $timeperiod ) );
+			break;
+		case parent::XML_REPORT_PROVIDER_DETAILS:
+			$this->outputXMLReport( $this->sqlProviderDetails() );
+			break;
+		case self::XML_REPORT_RATE_TYPE:
+			$this->outputXMLReport( $this->sqlRateTypes() );
+			break;
+		case self::XML_REPORT_UNMATCHED_PROTOCOL_ORPHANS:
+			$this->outputXMLReport( $this->sqlUnmatchedOrphansInProtocol() );
+			break;
+		case self::XML_REPORT_UNMATCHED_BILLED_ORPHANS_TOTAL: //TODO: redundand
+			$this->outputXMLReport( $this->sqlUnmatchedBilledOrphans('') );
+			break;
+		case self::XML_REPORT_ANNUAL_OVERVIEW_MONTH:
+			$this->outputXMLReport( $this->sqlAnnualOverview( self::XML_REPORT_ANNUAL_OVERVIEW_MONTH, $this->year ) );
+			break;
+		case self::XML_REPORT_ANNUAL_OVERVIEW_WEEK:
+			$this->outputXMLReport( $this->sqlAnnualOverview( self::XML_REPORT_ANNUAL_OVERVIEW_WEEK, $this->year ) );
+			break;
+		case self::XML_REPORT_ANNUAL_OVERVIEW_YEAR:
+			$this->outputXMLReport( $this->sqlAnnualOverview( self::XML_REPORT_ANNUAL_OVERVIEW_YEAR, $this->year ) );
+			break;
+		case self::XML_REPORT_INCOMING_CALL_LENGTH:
+			$this->outputXMLReport( $this->sqlIncomingCallLength( $limit, $this->year, $this->month ));
+			break;
+		case self::XML_REPORT_POPULAR_COMM_PARTNERS:
+			$this->outputXMLReport( $this->sqlPopularCommPartners( $limit, $this->year, $this->month ));			
+			break;
+		case self::XML_REPORT_MOST_EXPENSIVE_COMM_PARTNERS:
+			$this->outputXMLReport( $this->sqlMostExpensiveCommPartners( $limit, $this->year, $this->month ));
+			break;
+		case self::XML_REPORT_USER_LIST:
+			$this->outputXMLReport( $this->sqlUserList());			
+			break;
+		case self::XML_REPORT_CONTACT_LIST:
+			$this->outputXMLReport( $this->sqlContactList());			
+			break;
+		}
+	}	
+	
 	/*
 	 * render the menu of the import manager
 	 */
@@ -341,7 +452,6 @@ class htmlFrontend extends reports{
 			print "</p>";
 			print "</fieldset>";		
 	} 
-	
 	
 	/*
 	 * start import process depending on users choice
@@ -442,33 +552,26 @@ class htmlFrontend extends reports{
 		if ($this->month != 0)
 			$monthstring  = $this->month . '/';
 		else
-			$monthstring  = ''; // whole year 
-		return htmlspecialchars( $monthstring . $this->year);
+			$monthstring  = ''; // whole year
+		if ($this->year == 0){
+			$monthstring  = ''; // whole year
+			$yearstring   = 'Unbegrenzter Zeitraum';  
+		}
+		else{
+			$yearstring = $this->year;
+		} 
+		return htmlspecialchars( $monthstring . $yearstring );
 	}
+
+	
+	
 	
 	/*
 	 * output monthly report
 	 * $all (true / false)
 	 * $user_cols (true / false)
 	 */
-	private function getMonthlyReport($all, $user_cols){
-		if ($all === false){
-			$timeperiod = $this->sqlWhereTimeperiod( 'c', $this->month, $this->year);
-			if ($this->printview === false){ 
-				$this->monthFlicker();
-			}
-			$timeframe = $this->humanReadableTimeframe();
-		}
-		else{
-			$timeframe = '(zeitlich unbegrenzt)';
-			$timeperiod = '';
-		}
-		
-		print "<h1>Telefonreport $timeframe</h1>";
-		$this->outputSQLReport( $this->sqlUnmatchedBilledOrphans( $timeperiod ));
-		if ($this->printview === false && $all === false){ 
-			print "<p><a href=\"index.php?category=".self::CATEGORY_MONTHLY_BILLS."&printview=1&y=".$this->year."&m=".$this->month."\" target=\"_blank\">Print view</a></p>";
-		}
+	private function getMonthlyReport($user_cols, $timeperiod){
 		//get sum row
 		//TODO: it's not good to depend on the column names defined in another class, define an interface!
 		$sum_row_data = $this->sqlPhoneBillSumRow( $timeperiod, $user_cols );
@@ -487,15 +590,13 @@ class htmlFrontend extends reports{
 		//get phone bill table
 		$phone_bill_table = $this->sqlPhoneBill( $timeperiod, $user_cols );
 		$phone_bill_table['sum_row'] = $this->getSumRowAsHTMLTableRow( $user_cols, $amount, $row );
-		$this->outputSQLReport( $phone_bill_table );
+		$this->outputSQLReport( $phone_bill_table);
+		
 		//output cost check
 		if ($user_cols === true){	
 			$check = round( floatval($amount['total']) - floatval($amount['all_users']) - floatval($amount['unbooked']) , 4);
 			print "<p>Total costs: <b>".$amount['total']."</b></p>";
 			print "<p>Cost Check: " . $amount['total'] . " - " . $amount['all_users'] . " EUR - ". $amount['unbooked'] . " = <b>" . $check . " EUR</b> / <b>". ($check != 0 ? 'CHECK UNSUCCESSFUL!' : "CHECK OK")."</b></p>";
-		}
-		if ($this->printview === false){
-			$this->outputSQLReport( $this->sqlIncomingCalls( $timeperiod ));			
 		}
 	}
 	
@@ -531,7 +632,7 @@ class htmlFrontend extends reports{
 	private function getTableContent($table_headers, $table, $sum_row_content){
 		
 		$nr = 1;
-		$table_content = '<table>'.CR.'<tr>'.CR;
+		$table_content = '<table class="yap_std">'.CR.'<tr>'.CR;
 		foreach ($table_headers as $header){
 			$table_content .= '<th>'.$header.'</th>'.CR;
 		}
@@ -571,12 +672,149 @@ class htmlFrontend extends reports{
 		return $table_content;
 	}
 
-	private function outputSQLReport( $data ){
-		if (count($data['table']) > 0){
-			print '<h1>'.$data['title'].'</h1>';
-			$data['headers'] = array_merge( array('Nr.'), $data['headers']);  
-			print $this->getTableContent($data['headers'], $data['table'], $data['sum_row']);
+	public function getXMLFromArray($table_headers, $table, $sum_row_content){
+
+		$xw = new  xmlWriter(); // Neues xmlWriter Objekt 
+		$xw->openMemory(); // Oeffnen eines XML-Dokuments im Speicher 
+		$xw->setIndent( true ); // sieht einfach besser aus ;-) 
+		$xw->startDocument(); // start document 
+		$xw->startElement("yaphobia_data"); // start <book> 
+
+		
+		foreach ($table as $row) {
+		    $xw->startElement('row');
+		    foreach ($row as $key => $value) {
+		    	//$xw->writeElement( $key, $value);
+		    	//if ($value == "") $value = "FILLED_BY_YAPHOBIA"; 
+		    	//if ($key == "") $key = "filled_by_yaphobia"; 
+		    	$xw->writeElement( htmlspecialchars($key), htmlspecialchars($value));
+		    }
+			$xw->endElement(); 
 		}
+
+		$xw->endElement(); // yaphobia_data 
+		$xw->endDocument(); // end document 
+		return $xw->outputMemory(); 
+	}
+
+	/*
+	 * 
+	 * 
+	 */
+	private function outputXMLReport( $data ){
+		if (is_object($data) && $data instanceof reportManager){
+			$data->executeQuery();
+			print  $this->getXMLFromArray($data->getColumnHeaders(), $data->getQueryResultArray(), $data->getSumRow());
+		}
+		else{
+			print $this->getXMLFromArray($data['headers'], $data['table'], $data['sum_row']);
+		}
+	}
+
+	/*
+	 * this method will be obsolete soon if we always use reportManager
+	 * 
+	 */
+	private function outputSQLReport( $data){
+		
+		if (is_object($data) && $data instanceof reportManager){
+			$this->outputSQLReportRM( $data );
+		}
+		else{		
+			if (count($data['table']) > 0){
+				print '<h1>'.$data['title'].'</h1>';
+				$data['headers'] = array_merge( array('Nr.'), $data['headers']);  
+				print $this->getTableContent($data['headers'], $data['table'], $data['sum_row']);
+			}
+			else{
+				print "empty table." . CR;
+			}
+		}
+	}
+
+	/*
+	 * modern version of outputSQLReport for reportManager + extjs
+	 * 
+	 */
+	private function outputSQLReportRM( reportManager $rm ){
+		if ($this->use_extjs){
+			$this->addExtJsGrid( $rm );
+		}
+		else{
+			print getType($rm->getColumnHeaders());
+			$rm->executeQuery();
+			if (count($rm->getQueryResultArray()) > 0){
+				print '<h1>'.$rm->getTitle().'</h1>';
+				$headers = array_merge( array('nr'=>'Nr.'), $rm->getColumnHeaders() );  
+				print $this->getTableContent($headers, $rm->getQueryResultArray(), $rm->getSumRow());
+			}
+		}
+		print $this->xmlLink($rm->getXmlId());
+		
+	}
+	
+	
+	/*
+	 * 
+	 * 
+	 */
+	private function addExtJsGrid( reportManager $rm){
+		$stdWidth = 120;
+		$fieldsMapping = '';
+		$gridColumns = '';
+		
+		foreach ($rm->getColumns() as $fieldname => $columndata){
+			$fieldsMapping .= "				'$fieldname',". CR;
+			$gridColumns .= "					".
+							"{header: '".$columndata['title']."',  align: 'left', width: ".$stdWidth.", dataIndex: '".$fieldname."', sortable: true},". CR;
+		}
+		
+		$storeName = 'store_'. $rm->getXmlId();
+		
+		$this->extJsScriptArea .="
+			
+			    // create the Data Store
+			    var ".$storeName." = new Ext.data.Store({
+			        // load using HTTP
+			        url: '".$this->xmlURI($rm->getXmlId())."',
+			
+			        // the return will be XML, so lets set up a reader
+			        reader: new Ext.data.XmlReader({
+			               // records will have an \"row\" tag
+			               record: 'row',
+			               id: 'phonenumber', //todo: find better id!
+			               totalRecords: '@total'
+			           }, [".CR.
+					$fieldsMapping."
+			                ])
+			    });
+
+			    // create the grid
+			    var grid = new Ext.grid.GridPanel({
+			        store: ".$storeName.",
+			        columns: [ ".CR. $gridColumns."
+		            ],
+			        renderTo:'yaphobia-phonebill-grid',
+			        width: ".(count($rm->getColumns())*$stdWidth + 30).",
+			        height: 200,
+			        title:'".$rm->getTitle()."',
+			        frame:true,
+			    });
+			    ".$storeName.".load();";
+
+		$this->extJsBodyArea .= "	<div class=\"yaphobia-extjs-grid\" id=\"yaphobia-phonebill-grid\"></div>".CR;
+			
+	}			
+	
+	private function flushExtJsArea(){
+		print "
+			<script>			
+				Ext.BLANK_IMAGE_URL = 'ext-2.2/resources/images/default/s.gif';
+				Ext.onReady(function(){
+		". $this->extJsScriptArea."
+			});			
+		</script>".
+		$this->extJsBodyArea;
 	}
 	
 } //end of class

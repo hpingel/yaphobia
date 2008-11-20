@@ -22,7 +22,6 @@
 *
 */
 
-	
 class reports{
 
 	//sql patterns often used
@@ -30,11 +29,29 @@ class reports{
 		SQL_LEFT_JOIN_PROVIDER_DETAILS_ID = 
 			'LEFT JOIN provider_details pd ON pd.provider_id = ',
 		SQL_SNIPPET_TOTALDURATION = 
-			"CONCAT(SUM(cpt.estimated_duration) DIV 60, 'h ', SUM(cpt.estimated_duration) MOD 60, 'm') AS total_duration",
+			"CONCAT(SUM(cpt.estimated_duration) DIV 60, 'h ', SUM(cpt.estimated_duration) MOD 60, 'm')", 
+		SQL_SNIPPET_TOTALDURATION_AS = "total_duration",
 		SQL_SNIPPET_TOTALBILLEDDURATION = 
-			"CONCAT(SUM(CEIL(cpt.billed_duration/60)) DIV 60, 'h ', SUM(CEIL(cpt.billed_duration/60)) MOD 60, 'm') AS total_billed_duration",
+			"CONCAT(SUM(CEIL(cpt.billed_duration/60)) DIV 60, 'h ', SUM(CEIL(cpt.billed_duration/60)) MOD 60, 'm')",
+		SQL_SNIPPET_TOTALBILLEDDURATION_AS = "total_billed_duration",
 		SQL_SNIPPET_TOTALCOSTS = 
-			"CONCAT(FORMAT(SUM(cpt.billed_cost),2),' EUR') AS total_costs";
+			"CONCAT(FORMAT(SUM(cpt.billed_cost),2),' EUR')",
+		SQL_SNIPPET_TOTALCOSTS_AS = "total_costs",
+		XML_REPORT_MONTHLY_BILL = 1,
+		XML_REPORT_UNMATCHED_BILLED_ORPHANS = 2,
+		XML_REPORT_INCOMING_CALLS = 3,
+		XML_REPORT_PROVIDER_DETAILS = 4,
+		XML_REPORT_RATE_TYPE = 5,
+		XML_REPORT_UNMATCHED_PROTOCOL_ORPHANS = 6,
+		XML_REPORT_UNMATCHED_BILLED_ORPHANS_TOTAL = 7,
+		XML_REPORT_ANNUAL_OVERVIEW_MONTH = 8,
+		XML_REPORT_ANNUAL_OVERVIEW_WEEK = 9,
+		XML_REPORT_ANNUAL_OVERVIEW_YEAR = 10,
+		XML_REPORT_INCOMING_CALL_LENGTH = 11,
+		XML_REPORT_POPULAR_COMM_PARTNERS = 12,
+		XML_REPORT_MOST_EXPENSIVE_COMM_PARTNERS = 13,
+		XML_REPORT_USER_LIST = 14,
+		XML_REPORT_CONTACT_LIST = 15;		
 	
 	protected
 		$db,
@@ -54,7 +71,7 @@ class reports{
 	}
 
 	/*
-	 * getFullResultArray
+	 * getFullResultArray (soon obsolete in this class)
 	 * 
 	 */
 	protected function getFullResultArray($result){
@@ -81,26 +98,13 @@ class reports{
 	 * 
 	 */
 	protected function sqlProviderDetails(){
-		$query = 
-			'SELECT provider_name, CONCAT( current_credit, \' EUR\') as credit, current_credit_timestamp '.
-			' FROM provider_details pd';
-		$result = mysql_query( $query, $this->dbh );
-		if (mysql_errno() != 0){
-			print mysql_error();
-			die();	
-		}		
-		$data = array(
-			'title' => 'Provider-Infos',
-			'table' => $this->getFullResultArray($result),
-			'query' => $query, 
-			'headers' => array(
-				'Provider',
-				'Guthaben',
-				'Stand von'
-			),
-			'sum_row' => ''
-		);			
-		return $data;
+		$rm = new reportManager( $this->dbh, self::XML_REPORT_PROVIDER_DETAILS );
+		$rm->setTitle('Provider-Infos');
+		$rm->addColumn('Provider' , 'provider_name'                    , 'provider_name');
+		$rm->addColumn('Guthaben' , 'CONCAT( current_credit, \' EUR\')', 'credit');
+		$rm->addColumn('Stand von', 'current_credit_timestamp'         , 'current_credit_timestamp');
+		$rm->addSelectFromTable('provider_details pd');
+		return $rm;
 	}
 	
 	/*
@@ -108,29 +112,13 @@ class reports{
 	 * 
 	 */
 	protected function sqlRateTypes(){
-		$query = 
-			'SELECT pd.provider_name'.
-			', prt.rate_type'.
-			', CONCAT( prt.price_per_minute, \' EUR\')'.
-			' FROM provider_rate_types prt'.
-			' '. self::SQL_LEFT_JOIN_PROVIDER_DETAILS_ID . 'prt.provider_id';
-		$result = mysql_query( $query, $this->dbh );
-		if (mysql_errno() != 0){
-			print mysql_error();
-			die();	
-		}		
-		$data = array(
-			'title' => 'Tarife der Provider',
-			'table' => $this->getFullResultArray($result),
-			'query' => $query, 
-			'headers' => array(
-				'Provider',
-				'Tarif',
-				'Preis pro Minute',
-			),
-			'sum_row' => ''
-		);			
-		return $data;
+		$rm = new reportManager( $this->dbh, self::XML_REPORT_RATE_TYPE );
+		$rm->setTitle('Tarife der Provider');
+		$rm->addColumn('Provider' , 'pd.provider_name', 'provider_name');
+		$rm->addColumn('Tarif' , ' prt.rate_type', 'rate_type' );
+		$rm->addColumn('Preis pro Minute', 'CONCAT( prt.price_per_minute, \' EUR\')', 'price');
+		$rm->addSelectFromTable('provider_rate_types prt '. self::SQL_LEFT_JOIN_PROVIDER_DETAILS_ID . 'prt.provider_id');
+		return $rm;
 	}
 
 	/*
@@ -138,85 +126,56 @@ class reports{
 	 * 
 	 */
 	protected function sqlUnmatchedOrphansInProtocol(){
-		$query=
-			'SELECT cp.date, cp.phonenumber, uc.identity, cp.estimated_duration, pd.provider_name'.
-			' FROM callprotocol cp'.
+		$rm = new reportManager( $this->dbh, self::XML_REPORT_UNMATCHED_PROTOCOL_ORPHANS );
+		$rm->setTitle('Buchungscheck: Protokollierte kostenpflichtige Anrufe, die keinen Buchungsdatensatz haben');
+		$rm->addColumn('Datum / Uhrzeit' , 'cp.date', 'date');
+		$rm->addColumn('Telefonnummer' , 'cp.phonenumber', 'phonenumber');
+		$rm->addColumn('Identit&auml;t' , 'uc.identity', 'identity');
+		$rm->addColumn('Dauer Sch&auml;tzung' , 'cp.estimated_duration', 'estimated_duration');
+		$rm->addColumn('Provider' , 'pd.provider_name', 'provider_name');
+		$rm->addSelectFromTable('callprotocol cp'.
 			' ' . self::SQL_LEFT_JOIN_PROVIDER_DETAILS_ID . 'cp.provider_id'.
 			' LEFT JOIN user_contacts uc ON cp.phonenumber = uc.phonenumber '.
-			' WHERE cp.provider_id > 0 AND cp.calltype=3 AND ISNULL(cp.billed)';
-		$result = mysql_query( $query, $this->dbh );
-		if (mysql_errno() != 0){
-			print mysql_error();
-			die();	
-		}		
-		$data = array(
-			'title' => 'Buchungscheck: Protokollierte kostenpflichtige Anrufe, die keinen Buchungsdatensatz haben',
-			'table' => $this->getFullResultArray($result),
-			'query' => $query, 
-			'headers' => array(
-				'Datum / Uhrzeit',
-				'Telefonnummer',
-				'Identit&auml;t',
-				'Dauer<br/>Sch&auml;tzung',
-				'Provider'
-			),
-			'sum_row' => ''
-		);			
-		return $data;
+			' WHERE cp.provider_id > 0 AND cp.calltype=3 AND ISNULL(cp.billed)');
+		return $rm;
 	}
-
 
 	/*
 	 * annual overview
 	 */
-	protected function sqlAnnualOverview( $mode, $year ){
+	protected function sqlAnnualOverview( $modeId, $year ){
 					
 		$datedisplay = "monthname(cpt.date)";
-		if ($mode == "DAYOFYEAR"){
+		if ($modeId == self::XML_REPORT_ANNUAL_OVERVIEW_YEAR){
 			//365 tage
+			$mode = "DAYOFYEAR";
 			$idlimit = 365; 
 			$datedisplay = "CONCAT(dayofmonth(cpt.date), '. ', monthname(cpt.date))";  // FIXME: achtung: schaltjahr!!!
 		}
-		elseif ($mode == "MONTH"){
+		elseif ($modeId == self::XML_REPORT_ANNUAL_OVERVIEW_MONTH){
 			//12 monate	
 			$idlimit = 12;
+			$mode = "MONTH";
 		}
 		else{
 			//52 wochen
 			$mode = "WEEKOFYEAR";
 			$idlimit = 52;
 		}
-		
-		$query = "SELECT cdm.id, ".
-			"$datedisplay, CONCAT(count(cpt.date), ' Gespraeche') AS sumofcalls, " . 
-			self::SQL_SNIPPET_TOTALDURATION . ", " . 
-			self::SQL_SNIPPET_TOTALBILLEDDURATION . ", " . 
-			self::SQL_SNIPPET_TOTALCOSTS . " ".
-			"FROM calendar_dummy_data cdm ".
+
+		$rm = new reportManager( $this->dbh, $modeId );
+		$rm->setTitle('Overview (' . $mode . ')');
+		$rm->addColumn('Monat' , 'cdm.id', 'id');
+		$rm->addColumn('Monatsname' , $datedisplay, 'monthname');
+		$rm->addColumn('Anzahl Gespraeche' , "CONCAT(count(cpt.date), ' Gespraeche')", 'sumofcalls');
+		$rm->addColumn('Gespraechsdauer' , self::SQL_SNIPPET_TOTALDURATION, self::SQL_SNIPPET_TOTALDURATION_AS);
+		$rm->addColumn('berechnete Gespraechsdauer' , self::SQL_SNIPPET_TOTALBILLEDDURATION, self::SQL_SNIPPET_TOTALBILLEDDURATION_AS);
+		$rm->addColumn('Kosten' , self::SQL_SNIPPET_TOTALCOSTS, self::SQL_SNIPPET_TOTALCOSTS_AS);
+		$rm->addSelectFromTable("calendar_dummy_data cdm ".
 			"LEFT JOIN callprotocol cpt ON cdm.id = $mode(cpt.date) AND YEAR(cpt.date)=$year ".
 			"WHERE cdm.id <= $idlimit ".
-			"GROUP BY cdm.id";
-		
-		$result = mysql_query( $query, $this->dbh );
-		if (mysql_errno() != 0){
-			print mysql_error();
-			die();	
-		}		
-		$data = array(
-			'title' => 'Overview (' . $mode . ')',
-			'table' => $this->getFullResultArray($result),
-			'query' => $query, 
-			'headers' => array(
-				'Monat',
-				'Monatsname',
-				'Anzahl<br/>Gespraeche',
-				'Gespraechsdauer',
-				'berechnete<br/>Gespraechsdauer',
-				'Kosten'
-			),
-			'sum_row' => ''
-		);			
-		return $data;		
+			"GROUP BY cdm.id");
+		return $rm;
 	}	
 
 	private function sqlFlexStats( $title, $fields, $where, $orderby, $limit, $year, $month ){
@@ -271,8 +230,8 @@ class reports{
 		return $this->sqlFlexStats( 
 			$title = 'Incoming and outgoing calls: Most popular communication partners (sorted by total call length)', 
 			$fields = array(
-				'Summe Gespraechsdauer' => self::SQL_SNIPPET_TOTALDURATION,
-				'Summe Gespraechskosten' => self::SQL_SNIPPET_TOTALCOSTS 
+				'Summe Gespraechsdauer' => self::SQL_SNIPPET_TOTALDURATION . ' AS ' . self::SQL_SNIPPET_TOTALDURATION_AS,
+				'Summe Gespraechskosten' => self::SQL_SNIPPET_TOTALCOSTS . ' AS ' . self::SQL_SNIPPET_TOTALCOSTS_AS
 			),
 			$where = '1=1',
 			$orderby = 'cpt.estimated_duration',
@@ -286,8 +245,8 @@ class reports{
 		return $this->sqlFlexStats( 
 			$title = 'Outgoing calls: Most expensive communication partners', 
 			$fields = array(
-				'Summe Gespraechskosten' => self::SQL_SNIPPET_TOTALCOSTS, 
-				'Summe Gespraechsdauer' => self::SQL_SNIPPET_TOTALDURATION
+				'Summe Gespraechskosten' => self::SQL_SNIPPET_TOTALCOSTS . ' AS ' . self::SQL_SNIPPET_TOTALCOSTS_AS, 
+				'Summe Gespraechsdauer' => self::SQL_SNIPPET_TOTALDURATION . ' AS ' . self::SQL_SNIPPET_TOTALDURATION_AS
 			),
 			$where = 'cpt.calltype = 3 ',
 			$orderby = 'cpt.billed_cost',
@@ -368,7 +327,7 @@ class reports{
 			", DATE_FORMAT(c.date,'%H:%i:%s') AS time".
 			', c.phonenumber'.
 			', uc.identity'.
-			', if (c.calltype = 1 AND c.usedphone != \'Anrufbeantworter\', \'ja\',\'nein\')'.
+			', if (c.calltype = 1 AND c.usedphone != \'Anrufbeantworter\', \'ja\',\'nein\') AS accepted'.
 			', c.estimated_duration'.
 			', c.providerstring'.
 			' FROM callprotocol c '.
@@ -447,7 +406,7 @@ class reports{
 	 * 
 	 */
 	private function sqlPhoneBillBase( $sum_mode, $timeperiod, $user_cols ){
-		
+
 		$user_cols_string = "";
 		
 		if ($user_cols === true){
