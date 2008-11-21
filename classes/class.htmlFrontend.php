@@ -79,6 +79,7 @@ class htmlFrontend extends reports{
 		$close_gate = '';
 		if (file_exists(PATH_TO_SETTINGS)){
 			require_once(PATH_TO_SETTINGS);
+			$this->use_extjs = EXTJS_UI_ENABLED;
 			$this->authentication_enabled = defined('YAPHOBIA_WEB_INTERFACE_PASSWORD') && (constant('YAPHOBIA_WEB_INTERFACE_PASSWORD') != "");
 			if ( $this->authentication_enabled ){
 				$close_gate = $this->authenticate();
@@ -150,13 +151,13 @@ class htmlFrontend extends reports{
 	
 	
 	protected function authenticate(){
+		$close_gate = '';		
 		session_start();
 		//check if session is authenticated
 		if (!session_is_registered('AUTHENTICATED')){
 			//check password
 			if (isset($_POST['PW']) && $_POST['PW'] == YAPHOBIA_WEB_INTERFACE_PASSWORD ){
 				session_register('AUTHENTICATED');
-				$close_gate = '';
 			}
 			else{
 				if (!session_is_registered('MULTIPLE_LOGIN_ATTEMPT')){
@@ -329,7 +330,7 @@ class htmlFrontend extends reports{
 		case self::CATEGORY_MIXED_STATS:
 			$limit = 20;
 			$this->monthPickerForm('');
-			print '<h1>'.$this->humanReadableTimeframe() . '<h1>';
+			print '<h1>'.$this->humanReadableTimeframe() . '</h1>';
 			$this->outputSQLReport( $this->sqlIncomingCallLength( $limit, $this->year, $this->month ));
 			$this->outputSQLReport( $this->sqlPopularCommPartners( $limit, $this->year, $this->month ));			
 			$this->outputSQLReport( $this->sqlMostExpensiveCommPartners( $limit, $this->year, $this->month ));

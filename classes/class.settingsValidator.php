@@ -67,6 +67,7 @@ class settingsValidator{
 		$pathToYaphobia = str_replace("classes","",dirname(__FILE__));
 		$optional_constants = array(
 			'TRACE_LEVEL' => 2, //0-5
+			'EXTJS_UI_ENABLED' => false, //experimental
 			'PATH_TO_YAPHOBIA' => $pathToYaphobia,
 			'YAPHOBIA_COOKIEJAR_DIR'  => $pathToYaphobia. 'cookiejar/',
 			'YAPHOBIA_DATA_EXPORT_DIR' => $pathToYaphobia. 'data_export/',

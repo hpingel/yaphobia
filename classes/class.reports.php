@@ -178,51 +178,34 @@ class reports{
 		return $rm;
 	}	
 
-	private function sqlFlexStats( $title, $fields, $where, $orderby, $limit, $year, $month ){
-		$headers = array(
-			'Identitaet',
-			'Telefonnummer'
-		);
-		$sql_fields = '';
-		foreach ($fields as $key=>$value){
-			$headers[]= $key;
-			$sql_fields .= $value .', ';
+	private function sqlFlexStats( $title, $fields, $where, $orderby, $limit, $year, $month, $modeId ){
+		$rm = new reportManager( $this->dbh, $modeId );
+		$rm->setTitle($title);
+		$rm->addColumn('Identitaet' , 'uc.identity', 'identity');
+		$rm->addColumn('Telefonnummer' , 'cpt.phonenumber', 'phonenumber');
+		foreach ($fields as $column){
+			$rm->addColumn($column[0], $column[1], $column[2]);
 		}
-		$sql_fields = substr($sql_fields, 0, strlen($sql_fields) -2 );
-		
-		$query=
-			'SELECT uc.identity, cpt.phonenumber, ' . $sql_fields . ' '.
-			'FROM callprotocol cpt '.
+		$rm->addSelectFromTable('callprotocol cpt '.
 			'LEFT JOIN user_contacts uc ON uc.phonenumber = cpt.phonenumber '.
 			'WHERE ' . $where . ' ' . $this->sqlWhereTimeperiod( 'cpt', $month, $year) . ' '. 
 			'GROUP BY cpt.phonenumber '.
 			"ORDER BY SUM( $orderby ) DESC ".
-			'LIMIT '.intval($limit);
-			
-		$result = mysql_query( $query, $this->dbh );
-		if (mysql_errno() != 0){
-			print mysql_error();
-			die();	
-		}	
-		$data = array(
-			'title' => $title,
-			'table' => $this->getFullResultArray($result),
-			'query' => $query, 
-			'headers' => $headers,
-			'sum_row' => ''
-		);			
-		return $data;			
+			'LIMIT '.intval($limit)
+		);
+		return $rm;			
 	}
 	
 	protected function sqlIncomingCallLength( $limit, $year, $month ){
 		return $this->sqlFlexStats( 
 			$title = 'Incoming calls length: Show people that like to talk to us (sorted by total call length)', 
-			$fields = array('Summe Gespraechsdauer' => self::SQL_SNIPPET_TOTALDURATION),
+			$fields = array( array('Summe Gespraechsdauer', self::SQL_SNIPPET_TOTALDURATION, self::SQL_SNIPPET_TOTALDURATION_AS)),
 			$where = 'cpt.calltype != 3 ',
 			$orderby = 'cpt.estimated_duration',
 			$limit,
 			$year,
-			$month
+			$month,
+			self::XML_REPORT_INCOMING_CALL_LENGTH
 		);
 	}
 
@@ -230,14 +213,15 @@ class reports{
 		return $this->sqlFlexStats( 
 			$title = 'Incoming and outgoing calls: Most popular communication partners (sorted by total call length)', 
 			$fields = array(
-				'Summe Gespraechsdauer' => self::SQL_SNIPPET_TOTALDURATION . ' AS ' . self::SQL_SNIPPET_TOTALDURATION_AS,
-				'Summe Gespraechskosten' => self::SQL_SNIPPET_TOTALCOSTS . ' AS ' . self::SQL_SNIPPET_TOTALCOSTS_AS
+				array('Summe Gespraechsdauer', self::SQL_SNIPPET_TOTALDURATION, self::SQL_SNIPPET_TOTALDURATION_AS),
+				array('Summe Gespraechskosten', self::SQL_SNIPPET_TOTALCOSTS, self::SQL_SNIPPET_TOTALCOSTS_AS)
 			),
 			$where = '1=1',
 			$orderby = 'cpt.estimated_duration',
 			$limit,
 			$year,
-			$month
+			$month,
+			self::XML_REPORT_POPULAR_COMM_PARTNERS
 		);
 	}
 
@@ -245,17 +229,19 @@ class reports{
 		return $this->sqlFlexStats( 
 			$title = 'Outgoing calls: Most expensive communication partners', 
 			$fields = array(
-				'Summe Gespraechskosten' => self::SQL_SNIPPET_TOTALCOSTS . ' AS ' . self::SQL_SNIPPET_TOTALCOSTS_AS, 
-				'Summe Gespraechsdauer' => self::SQL_SNIPPET_TOTALDURATION . ' AS ' . self::SQL_SNIPPET_TOTALDURATION_AS
+				array('Summe Gespraechskosten', self::SQL_SNIPPET_TOTALCOSTS, self::SQL_SNIPPET_TOTALCOSTS_AS), 
+				array('Summe Gespraechsdauer', self::SQL_SNIPPET_TOTALDURATION, self::SQL_SNIPPET_TOTALDURATION_AS)
 			),
 			$where = 'cpt.calltype = 3 ',
 			$orderby = 'cpt.billed_cost',
 			$limit,
 			$year,
-			$month
+			$month,
+			self::XML_REPORT_MOST_EXPENSIVE_COMM_PARTNERS
 		);
 	}
 	
+	//this is not a report, only an internal representation of data!!!			
 	protected function getUserList(){
 		//TODO: turn this into a singleton object
 		if (!$this->user_list_loaded){
