@@ -145,7 +145,7 @@ class curllib {
 		    $response = $this->binaryTransfer ($comment, $request[ self::FR_PATH ]);
 			break;
 		}
-		if ($request[ self::FR_IGNORE ] == true){
+		if (array_key_exists( self::FR_IGNORE, $request) && $request[ self::FR_IGNORE ] == true){
 			$response = "";
 			$this->tr->addToTrace(3, "Content of this request will not be added to resultset.");
 		} 

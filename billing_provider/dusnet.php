@@ -37,33 +37,33 @@ final class dusnetRemote extends billingProviderPrototype{
 		$this->setCreditRegex('/<tr.*?><td><IMG.*?><\/td><td>.*?<\/td><td>(.*?EUR.*?)<\/td><\/tr>/');
 		$this->describeStandardRequests(
 			array(
-				FR_TASK_LOGON => array(
-					FR_TYPE     => FR_TYPE_POST,
-					FR_PATH     => "login.php",
-					FR_POSTVARS => "login=[[USER]]&password=[[PASSWORD]]&submit=Login",
+				self::FR_TASK_LOGON => array(
+					self::FR_TYPE     => self::FR_TYPE_POST,
+					self::FR_PATH     => "login.php",
+					self::FR_POSTVARS => "login=[[USER]]&password=[[PASSWORD]]&submit=Login",
 				),
-				FR_TASK_LOGOUT => array(
-					FR_TYPE     => FR_TYPE_GET,
-					FR_PATH     => "logout.php"
+				self::FR_TASK_LOGOUT => array(
+					self::FR_TYPE     => self::FR_TYPE_GET,
+					self::FR_PATH     => "logout.php"
 				),
-				FR_TASK_GETEVNOFMONTH => array(
+				self::FR_TASK_GETEVNOFMONTH => array(
 					//FIXME: in case the month selected is not the current month, it makes no sense to get the last three days!
 					array(
-						FR_COMMENT  => "get evn data from last 3 days",
-						FR_TYPE     => FR_TYPE_POST,
-						FR_POSTVARS => "sip=$sipAccount&submit=aktualisieren",
-						FR_PATH     => "voip_access/evn.php"
+						self::FR_COMMENT  => "get evn data from last 3 days",
+						self::FR_TYPE     => self::FR_TYPE_POST,
+						self::FR_POSTVARS => "sip=$sipAccount&submit=aktualisieren",
+						self::FR_PATH     => "voip_access/evn.php"
 					),
 					array(
-						FR_COMMENT  => "get evn data from [[YEAR]]-[[MONTH]]-01 to [[YEAR]]-[[MONTH]]-31",
-						FR_TYPE     => FR_TYPE_POST,
-						FR_POSTVARS => "startday=01&startmonth=[[MONTH]]&startyear=[[YEAR]]&endday=31&endmonth=[[MONTH]]&endyear=[[YEAR]]&sip=$sipAccount&archiv=Archiv",
-						FR_PATH     => "voip_access/evn.php"
+						self::FR_COMMENT  => "get evn data from [[YEAR]]-[[MONTH]]-01 to [[YEAR]]-[[MONTH]]-31",
+						self::FR_TYPE     => self::FR_TYPE_POST,
+						self::FR_POSTVARS => "startday=01&startmonth=[[MONTH]]&startyear=[[YEAR]]&endday=31&endmonth=[[MONTH]]&endyear=[[YEAR]]&sip=$sipAccount&archiv=Archiv",
+						self::FR_PATH     => "voip_access/evn.php"
 					)
 				),
-				FR_TASK_GETCREDIT => array(
-					FR_TYPE     => FR_TYPE_GET,
-					FR_PATH     => "xp/index.php"
+				self::FR_TASK_GETCREDIT => array(
+					self::FR_TYPE     => self::FR_TYPE_GET,
+					self::FR_PATH     => "xp/index.php"
 				)
 			)
 		);		
@@ -99,10 +99,10 @@ final class dusnetRemote extends billingProviderPrototype{
 		);*/
 		$this->callerString .= $this->executeFlexRequest(
 			array(
-				FR_COMMENT  => $comment,
-				FR_TYPE     => FR_TYPE_POST,
-				FR_POSTVARS => $postvalues,
-				FR_PATH     => "voip_access/evn.php"
+				self::FR_COMMENT  => $comment,
+				self::FR_TYPE     => self::FR_TYPE_POST,
+				self::FR_POSTVARS => $postvalues,
+				self::FR_PATH     => "voip_access/evn.php"
 			)
 		);
 		

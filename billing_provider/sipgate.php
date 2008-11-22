@@ -37,31 +37,31 @@ final class sipgateRemote extends billingProviderPrototype{
 		$this->setCreditRegex("/<td.*?>(.*?).&euro;<\/td>/");
 		$this->describeStandardRequests(
 			array(
-				FR_TASK_LOGON => array(
-					FR_TYPE     => FR_TYPE_POST,
-					FR_PATH     => "index.php",
-					FR_POSTVARS => "uname=[[USER]]&passw=[[PASSWORD]]&okey.x=7&okey.y=8&lasturi=%2Fuser%2Findex.php&jsh=1"
+				self::FR_TASK_LOGON => array(
+					self::FR_TYPE     => self::FR_TYPE_POST,
+					self::FR_PATH     => "index.php",
+					self::FR_POSTVARS => "uname=[[USER]]&passw=[[PASSWORD]]&okey.x=7&okey.y=8&lasturi=%2Fuser%2Findex.php&jsh=1"
 				),
-				FR_TASK_LOGOUT => array(
-					FR_TYPE     => FR_TYPE_GET,
-					FR_PATH     => "logout.php"
+				self::FR_TASK_LOGOUT => array(
+					self::FR_TYPE     => self::FR_TYPE_GET,
+					self::FR_PATH     => "logout.php"
 				),
-				FR_TASK_GETEVNOFMONTH => array(
+				self::FR_TASK_GETEVNOFMONTH => array(
 					array(
-						FR_COMMENT => "trigger evn for [[YEAR]]-[[MONTH]]",
-						FR_TYPE    => FR_TYPE_GET,
-						FR_PATH    => "konto_einzel.php?show=all&timeperiod=simple&timeperiod_simpletimeperiod=[[YEAR]]-[[MONTH]]",
-						FR_IGNORE  => true //ignore content of request
+						self::FR_COMMENT => "trigger evn for [[YEAR]]-[[MONTH]]",
+						self::FR_TYPE    => self::FR_TYPE_GET,
+						self::FR_PATH    => "konto_einzel.php?show=all&timeperiod=simple&timeperiod_simpletimeperiod=[[YEAR]]-[[MONTH]]",
+						self::FR_IGNORE  => true //ignore content of request
 					),
 					array(
-						FR_COMMENT => "download csv for month [[YEAR]]-[[MONTH]]",
-						FR_TYPE    => FR_TYPE_BINARY,
-						FR_PATH    => "download_evn.php"
+						self::FR_COMMENT => "download csv for month [[YEAR]]-[[MONTH]]",
+						self::FR_TYPE    => self::FR_TYPE_BINARY,
+						self::FR_PATH    => "download_evn.php"
 					)
 				),
-				FR_TASK_GETCREDIT => array(
-					FR_TYPE     => FR_TYPE_GET,
-					FR_PATH     => "start.php"
+				self::FR_TASK_GETCREDIT => array(
+					self::FR_TYPE     => self::FR_TYPE_GET,
+					self::FR_PATH     => "start.php"
 				)
 			)
 		);
