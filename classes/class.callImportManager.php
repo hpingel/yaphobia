@@ -265,7 +265,7 @@ class callImportManager{
 		$value_list = substr($value_list, 0, strlen($value_list) - 2);		
 		
 		$query = "INSERT INTO callprotocol ($col_list)".
-		$query .= " VALUES (" . $value_list . ")";
+			 	" VALUES (" . $value_list . ")";
 		$this->tr->addToTrace( 3,"Checking presence of call: $value_list");
 		
 		$result = mysql_query($query,$this->dbh);
@@ -368,7 +368,7 @@ class callImportManager{
 	 */
 	private function insertUnmatchedCall( $values ){
 		$query = "INSERT INTO unmatched_calls (provider_id, date, phonenumber, billed_duration, billed_cost, rate_type)".
-		$query .= " VALUES (" . $values . ")";
+				" VALUES (" . $values . ")";
 		$this->tr->addToTrace(4, "Checking presence of unmatched call: $values");
 					
 		$result = mysql_query($query,$this->dbh);
