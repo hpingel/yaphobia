@@ -259,87 +259,43 @@ class reports{
 	}
 	
 	protected function sqlUserList(){
-		$query = "SELECT username FROM users";
-		$result = mysql_query( $query, $this->dbh );
-		if (mysql_errno() != 0){
-			print mysql_error();
-			die();	
-		}		
-		$data = array(
-			'title' => 'Users',
-			'table' => $this->getFullResultArray($result),
-			'query' => $query, 
-			'headers' => array(
-				'Nutzername'
-			),
-			'sum_row' => ''
-		);			
-		return $data;		
+		
+		$rm = new reportManager( $this->dbh, self::XML_REPORT_USER_LIST );
+		$rm->setTitle('Users');
+		$rm->addColumn('Nutzer-ID' , 'id', 'id');
+		$rm->addColumn('Nutzername' , 'username', 'username');
+		$rm->addSelectFromTable('users');
+		return $rm;
 	}
 	
-	protected function sqlContactList(){	
-		$query = 
-			'SELECT uc.identity'.
-			', uc.phonenumber'.
-			', us.username'.
-			', COUNT(cpt.phonenumber) AS number_of_calls'.
-			' FROM user_contacts uc'.
+	protected function sqlContactList(){
+		$rm = new reportManager( $this->dbh, self::XML_REPORT_CONTACT_LIST );
+		$rm->setTitle('Contacts and related users');
+		$rm->addColumn('Identitaet'          , 'uc.identity', 'identity');
+		$rm->addColumn('Telefonnummer'       , 'uc.phonenumber', 'phonenumber');
+		$rm->addColumn('zugeordneter Nutzer' , 'us.username', 'username');
+		$rm->addColumn('Zahl der Telefonate' , 'COUNT(cpt.phonenumber)', 'number_of_calls');
+		$rm->addSelectFromTable('user_contacts uc'.
 			' LEFT JOIN users us ON uc.related_user=us.id'.
 			' LEFT JOIN callprotocol cpt ON cpt.phonenumber=uc.phonenumber GROUP BY cpt.phonenumber'.
-			' ORDER BY identity';
-		$result = mysql_query( $query, $this->dbh );
-		if (mysql_errno() != 0){
-			print mysql_error();
-			die();	
-		}		
-		$data = array(
-			'title' => 'Contacts and related users',
-			'table' => $this->getFullResultArray($result),
-			'query' => $query, 
-			'headers' => array(
-				'Identitaet',
-				'Telefonnummer',
-				'zugeordneter Nutzer',
-				'Zahl der Telefonate'
-			),
-			'sum_row' => ''
-		);			
-		return $data;				
+			' ORDER BY identity');
+		return $rm;
 	}
 
 	protected function sqlIncomingCalls( $timeperiod ){
-		$query = 
-			"SELECT DATE_FORMAT(c.date,'%d. %b %W') AS date".
-			", DATE_FORMAT(c.date,'%H:%i:%s') AS time".
-			', c.phonenumber'.
-			', uc.identity'.
-			', if (c.calltype = 1 AND c.usedphone != \'Anrufbeantworter\', \'ja\',\'nein\') AS accepted'.
-			', c.estimated_duration'.
-			', c.providerstring'.
-			' FROM callprotocol c '.
-			"LEFT JOIN user_contacts uc ON (c.phonenumber = uc.phonenumber ) ".
-			"WHERE calltype!='3'".$timeperiod;
-		$result = mysql_query( $query, $this->dbh );
-		if (mysql_errno() != 0){
-			print mysql_error();
-			die();	
-		}		
-		$data = array(
-			'title' => 'Eingehende Anrufe (inkl. nicht angenommene)',
-			'table' => $this->getFullResultArray($result),
-			'query' => $query, 
-			'headers' => array(
-				'Datum',
-				'Uhrzeit',
-				'Telefonnummer',
-				'Identit&auml;t',
-				'angenommen',
-				'Dauer<br/>Sch&auml;tzung',
-				'vermittelnder Provider'
-			),
-			'sum_row' => ''
-		);			
-		return $data;
+		$rm = new reportManager( $this->dbh, self::XML_REPORT_INCOMING_CALLS );
+		$rm->setTitle('Eingehende Anrufe (inkl. nicht angenommene)');
+		$rm->addColumn('Datum', "DATE_FORMAT(c.date,'%d. %b %W')", 'date');
+		$rm->addColumn('Uhrzeit', "DATE_FORMAT(c.date,'%H:%i:%s')", 'time');
+		$rm->addColumn('Telefonnummer', 'c.phonenumber', 'phonenumber');
+		$rm->addColumn('Identit&auml;t', 'uc.identity', 'identity');
+		$rm->addColumn('angenommen', 'IF (c.calltype = 1 AND c.usedphone != \'Anrufbeantworter\', \'ja\',\'nein\')', 'accepted');
+		$rm->addColumn('Dauer Sch&auml;tzung', 'c.estimated_duration', 'estimated_duration');
+		$rm->addColumn('vermittelnder Provider', 'c.providerstring', 'providerstring');
+		$rm->addSelectFromTable('callprotocol c '.
+			'LEFT JOIN user_contacts uc ON (c.phonenumber = uc.phonenumber ) '.
+			'WHERE calltype!=\'3\''.$timeperiod);
+		return $rm;
 	}
 
 	/*
@@ -347,41 +303,30 @@ class reports{
 	 * 
 	 */
 	protected function sqlUnmatchedBilledOrphans( $timeperiod ){
-		$query = 
-			'SELECT DATE_FORMAT(c.date,\'%d %W\') AS date'.
-			', DATE_FORMAT(c.date,\'%H:%i:%s\') AS time'.
-			', c.phonenumber'.
-			', uc.identity, '.
-			'CEIL(c.billed_duration/60) AS billed_duration'.
-			', pd.provider_name'.
-			', c.rate_type'.
-			', c.billed_cost '.
-			'FROM unmatched_calls c '.
+		if ($timeperiod == ''){
+			$date = "DATE_FORMAT(c.date,'%Y %d. %b %W')"; //also display year
+			$id = self::XML_REPORT_UNMATCHED_BILLED_ORPHANS_TOTAL; 
+		}
+		else{
+			$date = "DATE_FORMAT(c.date,'%d. %b %W')";
+			$id = self::XML_REPORT_UNMATCHED_BILLED_ORPHANS;
+		}
+		
+		$rm = new reportManager( $this->dbh, $id );
+		$rm->setTitle('Buchungscheck: Anrufe aus EVN\'s, die nicht im Protokoll gefunden worden sind');
+		$rm->addColumn('Datum', $date, 'date');
+		$rm->addColumn('Uhrzeit', "DATE_FORMAT(c.date,'%H:%i:%s')", 'time');		
+		$rm->addColumn('Telefonnummer', 'c.phonenumber', 'phonenumber');
+		$rm->addColumn('Identit&auml;t', 'uc.identity', 'identity');
+		$rm->addColumn('Dauer', 'CEIL(c.billed_duration/60)', 'billed_duration'); 
+		$rm->addColumn('Provider', 'pd.provider_name', 'provider_name'); 
+		$rm->addColumn('Tariftyp', 'c.rate_type', 'rate_type');
+		$rm->addColumn('Kosten', 'c.billed_cost', 'billed_cost'); 	
+		$rm->addSelectFromTable('unmatched_calls c '.
 			'LEFT JOIN user_contacts uc ON c.phonenumber = uc.phonenumber '.
 			self::SQL_LEFT_JOIN_PROVIDER_DETAILS_ID . 'c.provider_id '.
-			"WHERE 1=1 " . $timeperiod;
-		$result = mysql_query($query , $this->dbh );
-		if (mysql_errno() != 0){
-			print mysql_error();
-			die();	
-		}		
-		$data = array(
-			'title' => 'Buchungscheck: Anrufe aus EVN\'s, die nicht im Protokoll gefunden worden sind.',
-			'table' => $this->getFullResultArray($result),
-			'query' => $query, 
-			'headers' => array(
-				'Datum',
-				'Uhrzeit',
-				'Telefonnummer',
-				'Identity',
-				'Dauer',
-				'Provider',
-				'Tariftyp',
-				'Kosten'
-			),
-			'sum_row' => ''
-		);			
-		return $data;
+			"WHERE 1=1 " . $timeperiod);
+		return $rm;
 	}
 
 	/*

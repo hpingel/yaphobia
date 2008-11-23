@@ -79,6 +79,7 @@ class htmlFrontend extends reports{
 		$close_gate = '';
 		if (file_exists(PATH_TO_SETTINGS)){
 			require_once(PATH_TO_SETTINGS);
+        	$this->debug = (constant('TRACE_LEVEL') < 4) ? false : true;
 			$this->use_extjs = EXTJS_UI_ENABLED;
 			$this->authentication_enabled = defined('YAPHOBIA_WEB_INTERFACE_PASSWORD') && (constant('YAPHOBIA_WEB_INTERFACE_PASSWORD') != "");
 			if ( $this->authentication_enabled ){
@@ -379,7 +380,7 @@ class htmlFrontend extends reports{
 	 */
 	protected function xmlActions(){
 		$limit = 20;
-		$timeperiod = $this->sqlWhereTimeperiod( 'c', $this->month, $this->year);			
+		$timeperiod = $this->sqlWhereTimeperiod( 'c', $this->month, $this->year);		
 		
 		switch ($this->cat){
 		case parent::XML_REPORT_MONTHLY_BILL:
@@ -387,6 +388,9 @@ class htmlFrontend extends reports{
 			break;
 		case parent::XML_REPORT_UNMATCHED_BILLED_ORPHANS:
 			$this->outputXMLReport( $this->sqlUnmatchedBilledOrphans( $timeperiod ) );
+			break;
+		case parent::XML_REPORT_UNMATCHED_BILLED_ORPHANS_TOTAL:
+			$this->outputXMLReport( $this->sqlUnmatchedBilledOrphans( '') );
 			break;
 		case parent::XML_REPORT_INCOMING_CALLS:
 			$this->outputXMLReport( $this->sqlIncomingCalls( $timeperiod ) );
@@ -399,9 +403,6 @@ class htmlFrontend extends reports{
 			break;
 		case self::XML_REPORT_UNMATCHED_PROTOCOL_ORPHANS:
 			$this->outputXMLReport( $this->sqlUnmatchedOrphansInProtocol() );
-			break;
-		case self::XML_REPORT_UNMATCHED_BILLED_ORPHANS_TOTAL: //TODO: redundand
-			$this->outputXMLReport( $this->sqlUnmatchedBilledOrphans('') );
 			break;
 		case self::XML_REPORT_ANNUAL_OVERVIEW_MONTH:
 			$this->outputXMLReport( $this->sqlAnnualOverview( self::XML_REPORT_ANNUAL_OVERVIEW_MONTH, $this->year ) );
@@ -684,7 +685,6 @@ class htmlFrontend extends reports{
 		$xw->startDocument(); // start document 
 		$xw->startElement("yaphobia_data"); // start <book> 
 
-		
 		foreach ($table as $row) {
 		    $xw->startElement('row');
 		    foreach ($row as $key => $value) {
@@ -743,6 +743,8 @@ class htmlFrontend extends reports{
 	private function outputSQLReportRM( reportManager $rm ){
 		if ($this->use_extjs){
 			$this->addExtJsGrid( $rm );
+			//we don't know yet if the query returns rows at all because the query was not executed at this time
+			//this will be done on a separate HTTP request creating the XML document.
 		}
 		else{
 			$rm->executeQuery();
@@ -768,14 +770,16 @@ class htmlFrontend extends reports{
 		$gridColumns = '';
 		
 		foreach ($rm->getColumns() as $fieldname => $columndata){
+			$columndataTitle =  addslashes($columndata['title']);
+			$fieldname = addslashes($fieldname);
 			$fieldsMapping .= "				'$fieldname',". CR;
 			$gridColumns .= "					".
-							"{header: '".$columndata['title']."',  align: 'left', width: ".$stdWidth.", dataIndex: '".$fieldname."', sortable: true},". CR;
+							"{header: '".$columndataTitle."',  align: 'left', width: ".$stdWidth.", dataIndex: '".$fieldname."', sortable: true},". CR;
 		}
         $fieldsMapping = substr($fieldsMapping, 0, strlen($fieldsMapping) - 2) . CR;
-        $gridColumns = substr($gridColumns, 0, strlen($gridColumns) - 2) . CR;
+        $gridColumns = substr($gridColumns, 0, strlen($gridColumns) - 2). CR;
 		
-		$storeName = 'store_'. $rm->getXmlId();
+		$storeName = 'store_'. addslashes($rm->getXmlId());
 		
 		$this->extJsScriptArea .="
 			
@@ -803,7 +807,7 @@ class htmlFrontend extends reports{
 			        renderTo:'yaphobia-phonebill-grid',
 			        width: ".(count($rm->getColumns())*$stdWidth + 30).",
 			        height: 200,
-			        title:'".$rm->getTitle()."',
+			        title:'".addslashes($rm->getTitle())."',
 			        frame:true
 			    });
 			    ".$storeName.".load();";
