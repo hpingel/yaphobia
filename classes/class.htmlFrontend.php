@@ -79,8 +79,10 @@ class htmlFrontend extends reports{
 		$close_gate = '';
 		if (file_exists(PATH_TO_SETTINGS)){
 			require_once(PATH_TO_SETTINGS);
+            //TODO: TRACE_LEVEL and EXTJS_UI_ENABLED are available after call of proofreadOptionalSettings
+            //move proofreadOptionalSettings up here
         	$this->debug = (constant('TRACE_LEVEL') < 4) ? false : true;
-			$this->use_extjs = EXTJS_UI_ENABLED;
+			$this->use_extjs = defined('EXTJS_UI_ENABLED') ? EXTJS_UI_ENABLED : false;
 			$this->authentication_enabled = defined('YAPHOBIA_WEB_INTERFACE_PASSWORD') && (constant('YAPHOBIA_WEB_INTERFACE_PASSWORD') != "");
 			if ( $this->authentication_enabled ){
 				$close_gate = $this->authenticate();
@@ -253,26 +255,27 @@ class htmlFrontend extends reports{
 			'</div></body></html>'.CR;
 	}
 
+    //TODO: move this method in class installHelpers
 	private function installHelperChecks(){
 		//check if yaphobia database is empty. if it is empty, offer to create all tables
 		$ih = new installHelpers($this->dbh);
 		if ($ih->getNumberOfDBTables() === 0){
 			print '<div class="welcome"><h2>Welcome!</h2><p>It seems that your MySQL database is completely empty.<br/>You are probably running Yaphobia for the first time.</br> '.
-				'Needed database tables will be created in the database now...</p><pre></div>';
+				'Needed database tables will be created in the database now...</p><pre>';
 			$ih->createDBTables();
-			print "</pre>";
+			print "</pre></div>";
 			$this->cat = 0;
 		}
 		elseif ($ih->getNumberOfDBTables() != $ih->getMandatoryNumberOfDBTables()){
 			print '<div class="welcome"><h2>Welcome!</h2><p>It seems that your MySQL database is missing some tables.<br/> '.
-				'Needed database tables will be created in the database now...</p><pre></div>';
+				'Needed database tables will be created in the database now...</p><pre>';
 			$ih->createDBTables($this->dbh);	
-			print "</pre>";
+			print "</pre></div>";
 			$this->cat = 0;
 		}
 		//check if yaphobia callprotocol table is empty
-		if ($this->importType == 0 && $ih->callProtocolIsEmpty() && $this->cat != self::CATEGORY_CONFIG_CHECK){
-			print '<div class="welcome"><h2>Welcome!</h2><p>It seems that the call protocol of Yaphobia is completely empty!<br/>You are probably running Yaphobia for the first time.</br> '.
+		elseif ($this->importType == 0 && $ih->callProtocolIsEmpty() && $this->cat != self::CATEGORY_CONFIG_CHECK){
+			print '<div class="welcome"><h2>Empty call protocol</h2><p>It seems that the call protocol of Yaphobia is completely empty!<br/>You are probably running Yaphobia for the first time.</br> '.
 				'Please import call protocol data into Yaphobia!</p></div>';
 				$this->cat = 6;
 		}

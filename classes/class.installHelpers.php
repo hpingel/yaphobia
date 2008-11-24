@@ -100,7 +100,7 @@ class installHelpers{
 			"CREATE TABLE `user_contacts` (
 			  `phonenumber` VARCHAR(50)  NOT NULL,
 			  `identity` varchar(50) NOT NULL,
-			  `related_user` TINYINT UNSIGNED NOT NULL,
+			  `related_user` TINYINT UNSIGNED  DEFAULT NULL,
 			  `obsolete` tinyint(1) default NULL,
 			  `typo` tinyint(1) default NULL,
 			  PRIMARY KEY (`phonenumber`)
@@ -166,6 +166,8 @@ class installHelpers{
 				if (mysql_errno() == 0){
 					print "Table was created.\n";
 				}
+                elseif (mysql_errno() == 1050)
+                    print "Table already exists.\n";
 				else
 					print "Could not create table due to MySQL error: ". mysql_errno() . " " . mysql_error(). "\n";
 			}

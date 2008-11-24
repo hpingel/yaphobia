@@ -156,7 +156,7 @@ final class dusnetRemote extends billingProviderPrototype{
 						$durationstring = $data[6];
 					}
 					else{
-						$this->trace .=  "ERROR: Duration format should either be mm:ss or hh:mm:ss.\n";
+						//$this->trace .=  "ERROR: Duration format should either be mm:ss or hh:mm:ss.\n";
 						$hours   = 0;
 						$minutes = 0;
 						$seconds = 0;
