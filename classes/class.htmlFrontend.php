@@ -81,8 +81,8 @@ class htmlFrontend extends reports{
 			require_once(PATH_TO_SETTINGS);
             //TODO: TRACE_LEVEL and EXTJS_UI_ENABLED are available after call of proofreadOptionalSettings
             //move proofreadOptionalSettings up here
-        	$this->debug = (constant('TRACE_LEVEL') < 4) ? false : true;
-			$this->use_extjs = defined('EXTJS_UI_ENABLED') ? EXTJS_UI_ENABLED : false;
+        	$this->debug = ( defined('TRACE_LEVEL') && constant('TRACE_LEVEL') < 4) ? false : true;
+			$this->use_extjs = defined('EXTJS_UI_ENABLED') ? constant('EXTJS_UI_ENABLED') : false;
 			$this->authentication_enabled = defined('YAPHOBIA_WEB_INTERFACE_PASSWORD') && (constant('YAPHOBIA_WEB_INTERFACE_PASSWORD') != "");
 			if ( $this->authentication_enabled ){
 				$close_gate = $this->authenticate();
