@@ -308,7 +308,7 @@ class htmlFrontend extends reports{
 				$this->outputSQLReport( $this->sqlIncomingCalls( $timeperiod ));			
 			}
 			else{
-				$this->getMonthlyReport(true);
+				$this->getMonthlyReport(true, $timeperiod);
 			}
 			break;
 			
@@ -370,8 +370,8 @@ class htmlFrontend extends reports{
 		if ($this->use_extjs) $this->flushExtJsArea();
 	}
 	
-	private function xmlLink( $xmlaction ){
-		return '<p><a href="'.$this->xmlURI( $xmlaction ).'" target="_blank">XML view</a></p>';
+	private function xmlLink( $xmlaction, $title ){
+		return '<p><a href="'.$this->xmlURI( $xmlaction ).'" target="_blank">XML view ('.$title.')</a></p>';
 	}
 	
 	private function xmlURI( $xmlaction ){
@@ -389,7 +389,10 @@ class htmlFrontend extends reports{
 		case parent::XML_REPORT_MONTHLY_BILL:
 			$this->outputXMLReport( $this->sqlPhoneBill( $timeperiod, true ) );
 			break;
-		case parent::XML_REPORT_UNMATCHED_BILLED_ORPHANS:
+		case parent::XML_REPORT_MONTHLY_BILL_SUM:
+			$this->outputXMLReport( $this->sqlPhoneBillSumRow( $timeperiod, true ) );
+			break;
+			case parent::XML_REPORT_UNMATCHED_BILLED_ORPHANS:
 			$this->outputXMLReport( $this->sqlUnmatchedBilledOrphans( $timeperiod ) );
 			break;
 		case parent::XML_REPORT_UNMATCHED_BILLED_ORPHANS_TOTAL:
@@ -579,14 +582,15 @@ class htmlFrontend extends reports{
 	 * $all (true / false)
 	 * $user_cols (true / false)
 	 */
-	private function getMonthlyReport($user_cols, $timeperiod){
-		//get sum row
-		//TODO: it's not good to depend on the column names defined in another class, define an interface!
+	private function getMonthlyReport($user_cols, $timeperiod = ''){
+		
 		$sum_row_data = $this->sqlPhoneBillSumRow( $timeperiod, $user_cols );
-		$row = $sum_row_data['table'][0];
+		if (!$this->use_extjs) $sum_row_data->executeQuery();
+		$table = $sum_row_data->getQueryResultArray();
+		$row = $table[0];
 		$amount = array(
-			'total' => $row["sum_cost"],
-			'unbooked' => $row["unbooked_costs"],
+			'total'     => $row["sum_cost"],
+			'unbooked'  => $row["unbooked_costs"],
 			'all_users' => 0
 		);
 		if ($user_cols === true){
@@ -597,8 +601,14 @@ class htmlFrontend extends reports{
 		
 		//get phone bill table
 		$phone_bill_table = $this->sqlPhoneBill( $timeperiod, $user_cols );
-		$phone_bill_table['sum_row'] = $this->getSumRowAsHTMLTableRow( $user_cols, $amount, $row );
-		$this->outputSQLReport( $phone_bill_table);
+		if (!$this->use_extjs){
+			$phone_bill_table->setSumRow( $this->getSumRowAsHTMLTableRow($user_cols, $amount, $row) );
+			$this->outputSQLReport( $phone_bill_table );
+		}
+		else{
+			$this->outputSQLReport( $phone_bill_table );
+			$this->outputSQLReport( $sum_row_data );
+		}
 		
 		//output cost check
 		if ($user_cols === true){	
@@ -612,9 +622,10 @@ class htmlFrontend extends reports{
 	 * returns a string with a sum table row to be added to a html table
 	 */
 	private function getSumRowAsHTMLTableRow( $user_cols, $amount, $row ){
+		//if (!array_key_exists('sum_estimated_duration', $row)) $row['sum_estimated_duration'] = 0;
 		$sum_row_content =  '<tr class="sum-row">'.CR.
 			'<td colspan="5"></td>'.CR.
-			'<td class="right">'.$row['sum_estimated_duration'].'</td>'.CR.
+			//'<td class="right">'.$row['sum_estimated_duration'].'</td>'.CR.
 			'<td class="right">'.$row['sum_billed_duration'].'</td>'.CR.
 			'<td colspan="3"></td>'.CR.
 			'<td class="right">'.$amount['unbooked'].'</td>'.CR;
@@ -758,7 +769,7 @@ class htmlFrontend extends reports{
 			}
 		}
   		if ($this->use_extjs && $this->debug == true){
-    		print $this->xmlLink($rm->getXmlId());
+    		print $this->xmlLink($rm->getXmlId(), $rm->getTitle());
 	    }	
 	}
 	

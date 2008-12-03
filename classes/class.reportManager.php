@@ -58,8 +58,9 @@ class reportManager{
 		return $this->title;
 	}
 	
+	//TODO: Doesn't work like this!
 	public function setSumRow( $sumRow ){
-		$this->sumRow = $title;
+		$this->sumRow = $sumRow;
 	}
 	
 	public function getSumRow(){

@@ -51,8 +51,9 @@ class reports{
 		XML_REPORT_POPULAR_COMM_PARTNERS = 12,
 		XML_REPORT_MOST_EXPENSIVE_COMM_PARTNERS = 13,
 		XML_REPORT_USER_LIST = 14,
-		XML_REPORT_CONTACT_LIST = 15;		
-	
+		XML_REPORT_CONTACT_LIST = 15,		
+		XML_REPORT_MONTHLY_BILL_SUM = 16;
+		
 	protected
 		$db,
 		$dbh;
@@ -325,7 +326,7 @@ class reports{
 		$rm->addSelectFromTable('unmatched_calls c '.
 			'LEFT JOIN user_contacts uc ON c.phonenumber = uc.phonenumber '.
 			self::SQL_LEFT_JOIN_PROVIDER_DETAILS_ID . 'c.provider_id '.
-			"WHERE 1=1 " . $timeperiod);
+			'WHERE 1=1 ' . $timeperiod . ' ORDER BY date');
 		return $rm;
 	}
 
@@ -338,7 +339,31 @@ class reports{
 	 */
 	private function sqlPhoneBillBase( $sum_mode, $timeperiod, $user_cols ){
 
-		$user_cols_string = "";
+		if (!$sum_mode){
+			$id = self::XML_REPORT_MONTHLY_BILL;
+			$rm = new reportManager( $this->dbh, $id );
+			$rm->addColumn('Datum', 'DATE_FORMAT(c.date,\'%d. %b %W\')', 'date');			
+			$rm->addColumn('Uhrzeit', 'DATE_FORMAT(c.date,\'%H:%i:%s\')', 'time');			
+			$rm->addColumn('Telefonnr.', 'c.phonenumber', 'phonenumber');			
+			$rm->addColumn('Identit&auml;t', 'uc.identity', 'identity');			
+			//$rm->addColumn('Dauer Sch&auml;tzung', 'c.estimated_duration', 'estimated_duration');
+			$rm->addColumn('Dauer', 'CEIL(c.billed_duration/60)', 'billed_duration');
+			$rm->addColumn('Provider', 'pd.provider_name', 'provider_name');
+			$rm->addColumn('Tariftyp', 'c.rate_type', 'rate_type');
+			$rm->addColumn('Tarifcheck', 'IF( ABS( prt.price_per_minute * CEIL( c.billed_duration / 60 ) - c.billed_cost ) = 0, \'OK\', \'FEHLER\')', 'xcheck');
+			$rm->addColumn('ungebucht', 'IF( ISNULL(u.username) AND ISNULL(c.user), CONCAT(c.billed_cost, \' EUR\'), \'\')', 'unbooked_calls');			
+			$rm->setTitle('Outgoing calls');		
+		}
+		else{
+			$id = self::XML_REPORT_MONTHLY_BILL_SUM;
+			$rm = new reportManager( $this->dbh, $id );
+			//$rm->addColumn('invisible_1', 'SUM(c.estimated_duration)', 'sum_estimated_duration');
+			$rm->addColumn('Dauer', 'CEIL(SUM(c.billed_duration)/60)', 'sum_billed_duration');
+			$rm->addColumn('Summe Kosten', "CONCAT(FORMAT(SUM(c.billed_cost),4),' EUR')", 'sum_cost');
+			$rm->addColumn('ungebucht', "CONCAT( FORMAT( SUM( IF( ISNULL(u.username) AND ISNULL(c.user), CONCAT(c.billed_cost, ' EUR'), 0)), 4), ' EUR')", 'unbooked_costs');
+
+			$rm->setTitle('Outgoing calls - Sums');		
+		}
 		
 		if ($user_cols === true){
 			//get user list from db
@@ -346,84 +371,28 @@ class reports{
 			//add user specific cols to sql select statement
 			foreach ($userlist as $user) {
 				$uid = intval($user['id']);
-				if ($sum_mode)
-					$user_cols_string .= ", CONCAT( FORMAT( SUM( IF( uc.related_user = ".$uid.", c.billed_cost, 0 )), 4), ' EUR') AS user_col_". $uid;
-				else
-					$user_cols_string .= ", IF( uc.related_user = ".$uid.", CONCAT(c.billed_cost, ' EUR'), '') AS user_col_". $uid;
+				$usermatch_condition = ' (ISNULL(c.user) AND uc.related_user = '.$uid. ') OR c.user = '.$uid. ' ';
+				if ($sum_mode){
+					$rm->addColumn($user['username'], "CONCAT( FORMAT( SUM( IF( ".$usermatch_condition.", c.billed_cost, 0 )), 4), ' EUR')", "user_col_". $uid);
+				}
+				else{
+					$rm->addColumn($user['username'], "IF( ".$usermatch_condition.", CONCAT(c.billed_cost, ' EUR'), '')", "user_col_". $uid);
+				}
 			}
 		}
 		else{
-			$user_cols_string .= ", CONCAT(c.billed_cost, ' EUR') AS billed_cost, u.username as username";
+			$rm->addColumn('Kosten', "CONCAT(c.billed_cost, ' EUR')", 'billed_cost');
+			$rm->addColumn('User', 'u.username', 'username');
 		}
 
-		if ($sum_mode){
-			$query = 
-				"SELECT".
-				" SUM(c.estimated_duration) AS sum_estimated_duration".
-				", CEIL(SUM(c.billed_duration)/60) AS sum_billed_duration".
-				", CONCAT(FORMAT(SUM(c.billed_cost),4),' EUR') AS sum_cost" .
-				", CONCAT( FORMAT( SUM( IF( ISNULL(u.username), CONCAT(c.billed_cost, ' EUR'), 0)), 4), ' EUR') AS unbooked_costs";
-			$table_headers = array();
-		}
-		else{
-			$query = 
-				"SELECT DATE_FORMAT(c.date,'%d. %b %W') AS date".
-				", DATE_FORMAT(c.date,'%H:%i:%s') AS time".
-				", c.phonenumber".
-				", uc.identity".
-				", c.estimated_duration".
-				", CEIL(c.billed_duration/60) AS billed_duration".
-				", pd.provider_name".
-				", c.rate_type" .
-				", IF( ABS( prt.price_per_minute * CEIL( c.billed_duration / 60 ) - c.billed_cost ) = 0, 'OK', 'FEHLER') AS xcheck ".
-				", IF( ISNULL(u.username), CONCAT(c.billed_cost, ' EUR'), '') AS unbooked_calls";
-			$table_headers = array(
-				'Datum',
-				'Uhrzeit',
-				'Telefonnummer',
-				'Identit&auml;t',
-				'Dauer<br/>Sch&auml;tzung',
-				'Dauer<br/>Rechung',
-				'Provider',
-				'Tariftyp',
-				'Tarif-<br/>check',
-				'ungebucht'
-				);
-			
-			if ($user_cols === true){	
-				//add user columns to table headers
-				$userlist = $this->getUserList();
-				foreach ($userlist as $user) {
-					$table_headers[] = $user['username'];
-				}	
-			}
-			else{
-				$table_headers[] = 'Kosten'; 		
-				$table_headers[] = 'User';
-			}			
-		}
-		$query .= 
-			$user_cols_string . 
-			' FROM callprotocol c '.
+		$rm->addSelectFromTable('callprotocol c '.
 			self::SQL_LEFT_JOIN_PROVIDER_DETAILS_ID . 'c.provider_id '.
 			'LEFT JOIN provider_rate_types prt ON (c.provider_id = prt.provider_id AND c.rate_type = prt.rate_type ) '.
 			'LEFT JOIN user_contacts uc ON (c.phonenumber = uc.phonenumber ) '.
 			'LEFT JOIN users u ON (uc.related_user = u.id ) '.
-			' WHERE c.calltype = 3 '.$timeperiod;
-		
-		$result = mysql_query($query , $this->dbh );
-		if (mysql_errno() != 0){
-			print mysql_error();
-			die();	
-		}		
-		$data = array(
-			'title' => 'Outgoing calls',
-			'table' => $this->getFullResultArray($result),
-			'query' => $query, 
-			'headers' => $table_headers,
-			'sum_row' => ''
-		);			
-		return $data;		
+			' WHERE c.calltype = 3 '.$timeperiod);
+			
+		return $rm;
 	}
 	
 	protected function sqlPhoneBill( $timeperiod, $user_cols ){

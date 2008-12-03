@@ -22,15 +22,15 @@
 *
 */
 
-		th{
-			font-size: 5pt;
+		table.yap_std th{
+			font-size: 4pt;
 			margin: 0pt;
 			padding: 1pt;
 			overflow: hidden;
 		}
 		
-		td{
-			font-size: 6pt;
+		table.yap_std td{
+			font-size: 5pt;
 			margin: 0pt;
 			padding: 1pt;
 		}
