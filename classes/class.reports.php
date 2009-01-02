@@ -342,8 +342,8 @@ class reports{
 		if (!$sum_mode){
 			$id = self::XML_REPORT_MONTHLY_BILL;
 			$rm = new reportManager( $this->dbh, $id );
-			$rm->addColumn('Datum', 'DATE_FORMAT(c.date,\'%d. %b %W\')', 'date');			
-			$rm->addColumn('Uhrzeit', 'DATE_FORMAT(c.date,\'%H:%i:%s\')', 'time');			
+			$rm->addColumn('Datum', 'DATE_FORMAT(c.date,\'%b %d. %H:%i:%s\')', 'date');			
+			$rm->addColumn('Wochentag', 'DATE_FORMAT(c.date,\'%W\')', 'time');			
 			$rm->addColumn('Telefonnr.', 'c.phonenumber', 'phonenumber');			
 			$rm->addColumn('Identit&auml;t', 'uc.identity', 'identity');			
 			//$rm->addColumn('Dauer Sch&auml;tzung', 'c.estimated_duration', 'estimated_duration');

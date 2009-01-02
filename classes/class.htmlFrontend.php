@@ -148,8 +148,10 @@ class htmlFrontend extends reports{
 		//range check (month value 0 is ok, means whole year)
 		$this->month 	= ($this->month > 12 || $this->month < 0) ? date('m', time()) : $this->month;
 		$this->year 	= ($this->year > 2100 || $this->year < 2000) ? date('Y', time()) : $this->year;
-		$this->xmldata  = ($this->xmldata > 1 || $this->xmldata < 0) ? 1 : $this->xmldata; 
-		//
+		$this->xmldata  = ($this->xmldata > 1 || $this->xmldata < 0) ? 1 : $this->xmldata;
+		 
+		//disable extjs if in printview
+		if ($this->printview) $this->use_extjs = false;
 	}
 	
 	
@@ -214,10 +216,10 @@ class htmlFrontend extends reports{
 	private function htmlHeader(){
 		$additional_headers = '';
 		$additional_body_content = '';
-		if ($this->printview){
-			$additional_headers = '	<link rel="stylesheet" type="text/css" href="themes/standard/printview.css" />' . CR;
-		}
 		$additional_headers .= '<link rel="stylesheet" type="text/css" href="themes/standard/styles.css" />'.CR;
+		if ($this->printview){
+			$additional_headers .= '	<link rel="stylesheet" type="text/css" href="themes/standard/printview.css" />' . CR;
+		}
 		if ($this->use_extjs){
 			$additional_headers .= '
 				<link rel="stylesheet" type="text/css" href="ext-2.2/resources/css/ext-all.css" />
@@ -698,9 +700,10 @@ class htmlFrontend extends reports{
 		$xw->setIndent( true ); // sieht einfach besser aus ;-) 
 		$xw->startDocument(); // start document 
 		$xw->startElement("yaphobia_data"); // start <book> 
-
+		$counter = 0;
 		foreach ($table as $row) {
 		    $xw->startElement('row');
+		    $xw->writeElement( 'id', $counter++);
 		    foreach ($row as $key => $value) {
 		    	//$xw->writeElement( $key, $value);
 		    	//if ($value == "") $value = "FILLED_BY_YAPHOBIA"; 
@@ -730,31 +733,10 @@ class htmlFrontend extends reports{
 	}
 
 	/*
-	 * this method will be obsolete soon if we always use reportManager
+	 * outputSQLReport for reportManager + extjs
 	 * 
 	 */
-	private function outputSQLReport( $data){
-		
-		if (is_object($data) && $data instanceof reportManager){
-			$this->outputSQLReportRM( $data );
-		}
-		else{		
-			if (count($data['table']) > 0){
-				print '<h1>'.$data['title'].'</h1>';
-				$data['headers'] = array_merge( array('Nr.'), $data['headers']);  
-				print $this->getTableContent($data['headers'], $data['table'], $data['sum_row']);
-			}
-			else{
-				print "empty table." . CR;
-			}
-		}
-	}
-
-	/*
-	 * modern version of outputSQLReport for reportManager + extjs
-	 * 
-	 */
-	private function outputSQLReportRM( reportManager $rm ){
+	private function outputSQLReport( reportManager $rm ){
 		if ($this->use_extjs){
 			$this->addExtJsGrid( $rm );
 			//we don't know yet if the query returns rows at all because the query was not executed at this time
@@ -775,7 +757,7 @@ class htmlFrontend extends reports{
 	
 	
 	/*
-	 * 
+	 * addExtJsGrid
 	 * 
 	 */
 	private function addExtJsGrid( reportManager $rm){
@@ -793,20 +775,21 @@ class htmlFrontend extends reports{
         $fieldsMapping = substr($fieldsMapping, 0, strlen($fieldsMapping) - 2) . CR;
         $gridColumns = substr($gridColumns, 0, strlen($gridColumns) - 2). CR;
 		
-		$storeName = 'store_'. addslashes($rm->getXmlId());
+        $id = addslashes($rm->getXmlId());
+		$storeName = 'store_'. $id;
 		
 		$this->extJsScriptArea .="
 			
 			    // create the Data Store
 			    var ".$storeName." = new Ext.data.Store({
 			        // load using HTTP
-			        url: '".$this->xmlURI($rm->getXmlId())."',
+			        url: '".$this->xmlURI($id)."',
 			
 			        // the return will be XML, so lets set up a reader
 			        reader: new Ext.data.XmlReader({
 			               // records will have an \"row\" tag
 			               record: 'row',
-			               id: 'phonenumber', //todo: find better id!
+			               id: 'id', //todo: find better id!
 			               totalRecords: '@total'
 			           }, [".CR.
 					$fieldsMapping."
@@ -818,7 +801,7 @@ class htmlFrontend extends reports{
 			        store: ".$storeName.",
 			        columns: [ ".CR. $gridColumns."
 		            ],
-			        renderTo:'yaphobia-phonebill-grid',
+			        renderTo:'yaphobia-phonebill-grid-". $id . "',
 			        width: ".(count($rm->getColumns())*$stdWidth + 30).",
 			        height: 200,
 			        title:'".addslashes($rm->getTitle())."',
@@ -826,7 +809,7 @@ class htmlFrontend extends reports{
 			    });
 			    ".$storeName.".load();";
 
-		$this->extJsBodyArea .= "	<div class=\"yaphobia-extjs-grid\" id=\"yaphobia-phonebill-grid\"></div>".CR;
+		$this->extJsBodyArea .= "	<div class=\"yaphobia-extjs-grid\" id=\"yaphobia-phonebill-grid-". $id ."\"></div><br/>".CR;
 			
 	}			
 	
@@ -837,7 +820,7 @@ class htmlFrontend extends reports{
 				Ext.onReady(function(){
 		". $this->extJsScriptArea."
 			});			
-		</script>".
+		</script>".CR.
 		$this->extJsBodyArea;
 	}
 	

@@ -37,7 +37,8 @@ class callImportManager{
 		$dbh,
 		$tr,
 		$currentMonth,
-		$currentYear;
+		$currentYear,
+		$importStats;
 		
 	/*
 	 * constructor
@@ -47,6 +48,14 @@ class callImportManager{
 		$this->dbh = $dbh;
 		$this->currentMonth = date('m', time());
 		$this->currentYear = date('Y', time());
+		$this->importStats = array();
+	}
+	
+	/*
+	 *  destructor
+	 */
+	function __destruct(){
+		$this->tr->addToTrace( 2, 'Import statistics:' . CR . print_r( $this->importStats, true));
 	}
 	
 	/*
@@ -69,7 +78,11 @@ class callImportManager{
 	 * getProviderCalls
 	 */
 	private function getBillingProviderCalls( $p, $username, $password, $csv_file_flag){
-		
+		$this->importStats[$p->getProviderName()] = array(
+			'numberOfBillledCallsNotFoundInProtocol' => 0,
+			'numberOfBillledCallsFoundInProtocol' => 0,
+			'numberOfSkips' => 0
+		);
 		$p->logon($username , $password);
 		$p->getEvnOfMonth( $this->currentYear, $this->currentMonth );
 		$p->determineCredit();
@@ -121,7 +134,8 @@ class callImportManager{
 				'duration'        => $call["DauerInSekunden"],
 				'rate_description'=> $call["Tarif"],
 				'billed_cost'     => $call["Kosten"]
-			));
+			),
+			'dus.net');
 		}
 		//searches through database to see if there are new call rates to add to the list
 		$this->checkForNewRateTypes();
@@ -163,7 +177,8 @@ class callImportManager{
 				'duration' => 		$duration,
 				'rate_description'=>$call[2],
 				'billed_cost' =>	$call[5]
-			));
+			),
+			'sipgate');
 		}
 		//searches through database to see if there are new call rates to add to the list
 		$this->checkForNewRateTypes();
@@ -181,7 +196,13 @@ class callImportManager{
 		define('FRITZBOX_CALL_USED_PHONE',	 	4);
 		define('FRITZBOX_CALL_PROVIDER_ID', 	5);
 		define('FRITZBOX_CALL_EST_DURATION', 	6);
-				
+		$this->importStats['fritzbox'] = array( 
+				'numberOfAddedCallsFromProtocol'   => 0,
+				'numberOfSkippedCallsFromProtocol' => 0,
+				'numberOfUpdatedUserContacts'      => 0,
+				'numberOfAddedUserContacts'        => 0
+		);
+		
 		$fb = new fritzBoxRemote($this->tr);
 		//$fb->loadCallerListsFromDir( $path . "/fritzbox_alte_anruflisten");
 		$fb->logon( FRITZBOX_PASSWORD ); 
@@ -219,7 +240,7 @@ class callImportManager{
 			foreach ($call as $key=>$value){
 				$call[$key] = mysql_real_escape_string( $value, $this->dbh);
 			}
-	
+
 			$insert_array = array(
 				'date'				=> $date, 
 				'identity'			=> $call[FRITZBOX_CALL_IDENTITY], 
@@ -272,12 +293,14 @@ class callImportManager{
 		if (!$result) {
 			if (mysql_errno() == 1062){
 				$this->tr->addToTrace( 4,"Duplicate call was skipped! Is already in database.");
+				$this->importStats['fritzbox']['numberOfSkippedCallsFromProtocol']++;
 			}
 			else
 	    		$this->tr->addToTrace( 1,'Invalid query: ' . mysql_errno() . ") ". mysql_error()); 
 		}
 		else{
 			$this->tr->addToTrace( 4,"Call added to database.");
+			$this->importStats['fritzbox']['numberOfAddedCallsFromProtocol']++;
 		}
 		
 		//try to insert empty identity fields in table user_contacts
@@ -302,6 +325,7 @@ class callImportManager{
 					}
 					elseif (mysql_affected_rows() == 1){
 			    		$this->tr->addToTrace( 4, 'Update of user_contacts successful: ' . $call_array["identity"] );
+						$this->importStats['fritzbox']['numberOfUpdatedUserContacts']++;
 					}
 					elseif (mysql_affected_rows() != 1){
 			    		$this->tr->addToTrace( 4, 'Update attempt of user_contacts useless: ' . $call_array["identity"] );
@@ -311,6 +335,8 @@ class callImportManager{
 		}
 		else{
     		$this->tr->addToTrace( 4, 'Insert was successful: ' . $insert_result  );
+			$this->importStats['fritzbox']['numberOfAddedUserContacts']++;
+    		
 		}
 		
 
@@ -318,9 +344,15 @@ class callImportManager{
 	
 	/*
 	 * check all entries of database table unmatched_calls if we can now find matching entries
-	 * in table call_protocoll
+	 * in table call_protocol
 	 */
 	public function recheckUnmatchedCalls(){
+		$this->importStats['recheckUnmatched'] = array(
+			'numberOfBillledCallsNotFoundInProtocol' => 0,
+			'numberOfBillledCallsFoundInProtocol' => 0,
+			'numberOfSkips' => 0
+		);
+		
 		$query = "SELECT * FROM unmatched_calls";
 		$result = mysql_query($query, $this->dbh);
 		while ($row = mysql_fetch_assoc($result)) {
@@ -332,7 +364,7 @@ class callImportManager{
 				'rate_description'=> $row['rate_type'],
 				'billed_cost' => $row['billed_cost']
 			);
-			$success = $this->checkCallUniqueness( $call_array );
+			$success = $this->checkCallUniqueness( $call_array, 'recheckUnmatched' );
 			//$this->tr->addToTrace(3, "value of success is: '$success' " . ($success == true));
 			if ($success == true){
 				//delete row
@@ -393,7 +425,7 @@ class callImportManager{
 	 * if this is possible (single call is found) we update the call protocol entry with the 
 	 * billing information 
 	 */
-	private function checkCallUniqueness($x){
+	private function checkCallUniqueness($x, $provider_name){
 		$success = false;
 		$tolerance_span_call_begin = TOLERANCE_CALL_BEGIN; //in seconds
 		$tolerance_span_duration = TOLERANCE_CALL_DURATION; //in seconds
@@ -457,10 +489,12 @@ class callImportManager{
 			}
 			$this->tr->addToTrace( 2, $tr_buffer); 
 			$this->insertUnmatchedCall ($unmatchedCallString);
+			$this->importStats[$provider_name]['numberOfBillledCallsNotFoundInProtocol']++;
 		}
 		elseif ($matches == 0){
 			$this->tr->addToTrace( 2, "No match in call protocol for following call:\n" . print_r ($x, true));
 			$this->insertUnmatchedCall ($unmatchedCallString);
+			$this->importStats[$provider_name]['numberOfBillledCallsNotFoundInProtocol']++;
 		}
 		else{
 			$row = mysql_fetch_assoc($result);
@@ -470,14 +504,15 @@ class callImportManager{
 				$query = "UPDATE callprotocol SET $update $whereStart $where";
 				$this->tr->addToTrace( 5, "Query: $query\n");
 				$result = mysql_query( $query, $this->dbh );
+				$this->importStats[$provider_name]['numberOfBillledCallsFoundInProtocol']++;
 			}
 			else{
 				$this->tr->addToTrace( 3, "Call (". $x["date"] . " ". $x["number"] . "): Already billed. Skipped.");
+				$this->importStats[$provider_name]['numberOfSkips']++;
 			}
 		}
 		return $success;
 	}
-	
 	
 	/*
 	 * checkForNewRateTypes
