@@ -226,7 +226,6 @@ class htmlFrontend extends reports{
 				<script type="text/javascript" src="ext-2.2/adapter/ext/ext-base.js"></script>
 				<script type="text/javascript" src="ext-2.2/ext-all.js"></script>
 				';
-
 		}
 		
 		//header("Content-type: text/xml"); //disabled until we solved some problems with UTF-8
@@ -719,7 +718,7 @@ class htmlFrontend extends reports{
 	}
 
 	/*
-	 * 
+	 * outputXMLReport
 	 * 
 	 */
 	private function outputXMLReport( $data ){

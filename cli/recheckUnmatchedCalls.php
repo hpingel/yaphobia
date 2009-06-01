@@ -1,5 +1,4 @@
 <?php
-
 /***************************************************************
 *  Copyright notice
 *
@@ -23,41 +22,28 @@
 *
 */
 
-class trace{
-	
-	private 
-		$trace,
-		$type;
-	
-	function __construct( $type){
-		$this->trace = "";
-		if ($type != "html" && $type != "text"){
-			die("Unknown trace type: '$type'!\n");
-		}
-		$this->type = $type;
-		
+
+define( 'PATH_TO_YAPHOBIA', dirname(__FILE__) . '/../' );
+require_once( PATH_TO_YAPHOBIA. "classes/class.cliEnvironment.php");
+require_once( PATH_TO_YAPHOBIA. "classes/class.callImportManager.php");
+
+class cliRecheckUnmatchedCalls extends cliEnvironment { 
+
+	function __construct(){
+		parent::__construct(
+			" recheckUnmatchedCalls.php is a debug script to solve\n".
+			" problems with unmatched calls.\n"
+		);
+		$this->checkOptionalConfig();
+		$this->start();	
 	}
 
-	public function addToTrace( $level, $message){
-		if ($level <= TRACE_LEVEL){
-			if ($this->type == "html"){
-				print '<pre class="traceLevel'.$level.'">('.intval($level). ") " . htmlspecialchars($message) ."</pre>";
-			}
-			else{
-				print "(". $level . ") " . $message . "\n";
-			}
-			
-			//add line to trace file
-			file_put_contents( YAPHOBIA_DATA_EXPORT_DIR . 'trace.log',  date('Y-m-d H:m:s: ', time()) . "(". $level . ") " . $message . "\n", FILE_APPEND | LOCK_EX);
-		}
-		if ($level == 0){
-			die();
-		}
-		
+	private function start(){
+		$call_import = new callImportManager($this->dbh, $this->traceObj);
+		$call_import->recheckUnmatchedCalls();
 	}
-	
-	
 }
 
+$cgc = new cliRecheckUnmatchedCalls();
 
 ?>

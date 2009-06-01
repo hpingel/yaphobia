@@ -387,7 +387,7 @@ class reports{
 
 		$rm->addSelectFromTable('callprotocol c '.
 			self::SQL_LEFT_JOIN_PROVIDER_DETAILS_ID . 'c.provider_id '.
-			'LEFT JOIN provider_rate_types prt ON (c.provider_id = prt.provider_id AND c.rate_type = prt.rate_type ) '.
+			'LEFT JOIN provider_rate_types prt ON (c.provider_id = prt.provider_id AND c.rate_type = prt.rate_type AND c.date >= prt.valid_from AND c.date <= prt.valid_to ) '.
 			'LEFT JOIN user_contacts uc ON (c.phonenumber = uc.phonenumber ) '.
 			'LEFT JOIN users u ON (uc.related_user = u.id ) '.
 			' WHERE c.calltype = 3 '.$timeperiod);
