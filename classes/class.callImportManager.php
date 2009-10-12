@@ -115,6 +115,14 @@ class callImportManager{
 	}	
 
 	/*
+	 * getAliceCalls
+	 */
+	public function getAliceCalls( $username, $password){
+		$dn = new dusnetRemote($sipAccount, $this->tr);
+		return $this->getBillingProviderCalls($dn, $username, $password, DUSNET_SAVE_CSV_DATA_TO_WORKDIR);
+	}
+	
+	/*
 	 * getDusNetCalls
 	 */
 	public function getDusNetCalls( $sipAccount, $username, $password){
@@ -261,7 +269,7 @@ class callImportManager{
 		}
 
 		if (AUTOBILL_REMAINING_FLATRATE_CALLS)
-			$this->markFlateRateCallsAsBilled('0', 'Flatrate Festnetz');
+			$this->markFlateRateCallsAsBilled( FLATRATE_PROVIDER_ID, 'Flatrate Festnetz');
 		
 		$this->recheckUnmatchedCalls();
 	}
