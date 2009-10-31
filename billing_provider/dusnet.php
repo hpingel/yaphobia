@@ -51,7 +51,7 @@ final class dusnetRemote extends billingProviderPrototype{
 					array(
 						self::FR_COMMENT  => "get evn data from last 3 days",
 						self::FR_TYPE     => self::FR_TYPE_POST,
-						self::FR_POSTVARS => "sip=$sipAccount&submit=aktualisieren",
+						self::FR_POSTVARS => "startday=01&startmonth=[[MONTH]]&startyear=[[YEAR]]&endday=31&endmonth=[[MONTH]]&endyear=[[YEAR]]&sip=$sipAccount&submit=aktualisieren",
 						self::FR_PATH     => "voip_access/evn.php"
 					),
 					array(
