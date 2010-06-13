@@ -118,6 +118,9 @@ class reports{
 		$rm->addColumn('Provider' , 'pd.provider_name', 'provider_name');
 		$rm->addColumn('Tarif' , ' prt.rate_type', 'rate_type' );
 		$rm->addColumn('Preis pro Minute', 'CONCAT( prt.price_per_minute, \' EUR\')', 'price');
+        $rm->addColumn('derzeit aktiv', 'IF (CURRENT_TIMESTAMP() >= prt.valid_from AND CURRENT_TIMESTAMP() <= prt.valid_to, \'ja\',\'nein\')', 'accepted');
+        $rm->addColumn('gültig von', 'prt.valid_from', 'valid_from');
+        $rm->addColumn('gültig bis', 'prt.valid_to', 'valid_to');
 		$rm->addSelectFromTable('provider_rate_types prt '. self::SQL_LEFT_JOIN_PROVIDER_DETAILS_ID . 'prt.provider_id');
 		return $rm;
 	}

@@ -304,7 +304,7 @@ class callImportManager{
 				$this->importStats['fritzbox']['numberOfSkippedCallsFromProtocol']++;
 			}
 			else
-	    		$this->tr->addToTrace( 1,'Invalid query: ' . mysql_errno() . ") ". mysql_error()); 
+				$this->tr->addToTrace( 1,'Invalid query: ' . mysql_errno() . ") ". mysql_error()); 
 		}
 		else{
 			$this->tr->addToTrace( 4,"Call added to database.");
@@ -316,35 +316,35 @@ class callImportManager{
 			"INSERT INTO user_contacts (phonenumber, identity) VALUES ('".
 				mysql_real_escape_string($call_array["phonenumber"])."', '".
 				mysql_real_escape_string($call_array["identity"])."')";
-    	$this->tr->addToTrace( 4, 'Trying to insert identity into user contacts: ' . $insert_query  );
+		$this->tr->addToTrace( 4, 'Trying to insert identity into user contacts: ' . $insert_query  );
 		$insert_result = mysql_query($insert_query,$this->dbh);
 		if (!$insert_result) {
-    		$this->tr->addToTrace( 1, 'Error on insert: ' . mysql_errno() . ") ". mysql_error() );
-    		if (mysql_errno() == 1062){
+			$this->tr->addToTrace( 1, 'Error on insert: ' . mysql_errno() . ") ". mysql_error() );
+			if (mysql_errno() == 1062){
 				//try to update empty identity fields in table user_contacts
 				if ($call_array["identity"] != ""){
 					$update_query = 
 						"UPDATE user_contacts SET identity = '".mysql_real_escape_string($call_array["identity"])."' ".
 						"WHERE phonenumber = '".mysql_real_escape_string($call_array["phonenumber"])."' AND identity = ''";
-    				$this->tr->addToTrace( 4, 'Trying to update identity if empty in user contacts: ' . $update_query  );
+					$this->tr->addToTrace( 4, 'Trying to update identity if empty in user contacts: ' . $update_query  );
 					$update_result = mysql_query($update_query,$this->dbh);
 					if (!$update_result){
-			    		$this->tr->addToTrace( 1, 'Error on update attempt: ' . mysql_errno() . ") ". mysql_error() );
+						$this->tr->addToTrace( 1, 'Error on update attempt: ' . mysql_errno() . ") ". mysql_error() );
 					}
 					elseif (mysql_affected_rows() == 1){
-			    		$this->tr->addToTrace( 4, 'Update of user_contacts successful: ' . $call_array["identity"] );
+						$this->tr->addToTrace( 4, 'Update of user_contacts successful: ' . $call_array["identity"] );
 						$this->importStats['fritzbox']['numberOfUpdatedUserContacts']++;
 					}
 					elseif (mysql_affected_rows() != 1){
-			    		$this->tr->addToTrace( 4, 'Update attempt of user_contacts useless: ' . $call_array["identity"] );
+						$this->tr->addToTrace( 4, 'Update attempt of user_contacts useless: ' . $call_array["identity"] );
 					}
 				}
-    		}
+			}
 		}
 		else{
-    		$this->tr->addToTrace( 4, 'Insert was successful: ' . $insert_result  );
+			$this->tr->addToTrace( 4, 'Insert was successful: ' . $insert_result  );
 			$this->importStats['fritzbox']['numberOfAddedUserContacts']++;
-    		
+			
 		}
 		
 
@@ -388,7 +388,7 @@ class callImportManager{
 				$this->tr->addToTrace(4, $query);
 				$delete_result = mysql_query($query, $this->dbh);
 				if (!$delete_result) {
-			    	$this->tr->addToTrace( 1,'Invalid query: ' . mysql_error() );
+					$this->tr->addToTrace( 1,'Invalid query: ' . mysql_error() );
 				}
 				else{
 					$this->tr->addToTrace( 3,'Row from unmatched_calls was successfully deleted.');
@@ -418,7 +418,7 @@ class callImportManager{
 				$success = true;
 			}
 			else
-	    		$this->tr->addToTrace(1, 'Invalid query: ' . mysql_errno() . ") ". mysql_error());
+				$this->tr->addToTrace(1, 'Invalid query: ' . mysql_errno() . ") ". mysql_error());
 				$success = false;
 		}
 		else{
@@ -493,7 +493,7 @@ class callImportManager{
 				print_r($x, true).
 				"See possible matches here:\n";
 			while ($row = mysql_fetch_assoc($result)) {
-			    $tr_buffer .= print_r($row, true);
+				$tr_buffer .= print_r($row, true);
 			}
 			$this->tr->addToTrace( 2, $tr_buffer); 
 			$this->insertUnmatchedCall ($unmatchedCallString);
@@ -530,16 +530,23 @@ class callImportManager{
 		
 		$result = mysql_query("SELECT provider_id, rate_type FROM callprotocol GROUP BY (rate_type)",$this->dbh);
 		while ($row = mysql_fetch_assoc($result)) {
-			$result2 = mysql_query("INSERT INTO provider_rate_types (provider_id, rate_type) VALUES ('". $row["provider_id"] ."','". $row["rate_type"] ."')", $this->dbh);
-			if (!$result2) {
-				if (mysql_errno() == 1062){
-					$this->tr->addToTrace( 3,"Duplicate rate was skipped! Is already in database.");
+			$result3 = mysql_query("SELECT * FROM provider_rate_types WHERE provider_id ='".$row["provider_id"]."' AND rate_type = '".$row["rate_type"]."'",$this->dbh);
+			$doesAlreadyExist = mysql_num_rows( $result3 ) > 0;
+			if(!$doesAlreadyExist){
+				$result2 = mysql_query("INSERT INTO provider_rate_types (provider_id, rate_type) VALUES ('". $row["provider_id"] ."','". $row["rate_type"] ."')", $this->dbh);
+				if (!$result2) {
+					if (mysql_errno() == 1062){
+						$this->tr->addToTrace( 3,"Duplicate rate was skipped! Is already in database.");
+					}
+					else
+						$this->tr->addToTrace( 1,'Invalid query: ' . mysql_error() );
 				}
-				else
-			    	$this->tr->addToTrace( 1,'Invalid query: ' . mysql_error() );
+				else{
+					$this->tr->addToTrace( 3, "Rate added to database.");
+				}
 			}
 			else{
-				$this->tr->addToTrace( 3, "Rate added to database.");
+				$this->tr->addToTrace( 3,"Duplicate rate was skipped! Is already in database.");
 			}
 		}
 	}
@@ -570,7 +577,7 @@ class callImportManager{
 		$this->tr->addToTrace( 5,$query);
 		$result = mysql_query($query,$this->dbh);
 		if (!$result) {
-    		$this->tr->addToTrace( 1, 'Invalid query: ' . mysql_errno() . ") ". mysql_error() );
+			$this->tr->addToTrace( 1, 'Invalid query: ' . mysql_errno() . ") ". mysql_error() );
 		}
 		else{
 			$this->tr->addToTrace( 3, "Unbilled flatrate calls have been auto-billed.");

@@ -239,7 +239,7 @@ class curllib {
         
         curl_close($ch);
 
-        $this->tr->addToTrace(5,'CookieJarContents='.file_get_contents($this->cookieJarPath));
+        //$this->tr->addToTrace(5,'CookieJarContents='.file_get_contents($this->cookieJarPath));
         
         return $response;
     }
