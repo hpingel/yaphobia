@@ -105,10 +105,14 @@ class curllib {
         $response = "";
         if (is_array( $request)){
             if ( !array_key_exists( self::FR_TYPE, $request) && isset($request[0]) && is_array( $request[0] )) {
-                $this->tr->addToTrace(4, "detected multiple requests: ". count($request));
+                $this->tr->addToTrace(4, "detected multiple requests: ". count($request) . " (Comment: " . $comment . ")");
                 
                 foreach ($request as $single_request){
-                    $single_request[ self::FR_COMMENT ] = str_replace($search, $replace, $single_request[ self::FR_COMMENT ]);
+                    //replace placeholders with variables to make comment more specific
+                    if ( array_key_exists( self::FR_COMMENT, $single_request))
+                        $single_request[ self::FR_COMMENT ] = $comment . ": " . str_replace($search, $replace, $single_request[ self::FR_COMMENT ]);
+                    else
+                        $single_request[ self::FR_COMMENT ] = $comment;
                     $response .= $this->executeFlexRequest( $single_request[ self::FR_COMMENT ], $single_request, $search, $replace);
                 }
             }

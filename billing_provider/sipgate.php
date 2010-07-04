@@ -39,10 +39,12 @@ final class sipgateRemote extends billingProviderPrototype{
             array(
                    self::FR_TASK_LOGON => array(
                     array(
+                        self::FR_COMMENT => "Enforce cookie",
                         self::FR_TYPE     => self::FR_TYPE_GET,
                         self::FR_PATH     => "index.php?message=Bitte+aktivieren+Sie+Cookies+in+Ihrem+Browser+%21"
                     ),
                        array(
+                        self::FR_COMMENT => "Login with cookie",
                         self::FR_TYPE     => self::FR_TYPE_POST,
                         self::FR_PATH     => "index.php",
                         self::FR_POSTVARS => "uname=[[USER]]&passw=[[PASSWORD]]&okey.x=7&okey.y=8&lasturi=%2Fuser%2Findex.php&jsh=1%login=1&compaturl=https:%2F%2Fsecure.live.sipgate.de%2F"

@@ -62,7 +62,7 @@ class fritzBoxRemote extends curllib {
             "errorpage=../html/de/menus/menu2.html".
             "&getpage=../html/de/menus/menu2.html".
             "&login:command/response=".$challengeString.
-            "&sid=".$this->sessionID. //still inital
+            "&sid=".$this->sessionID. //still initial
             "&var:pagename=home".
             "&var:menu=home".
             "&var:pagemaster=".
@@ -158,7 +158,7 @@ class fritzBoxRemote extends curllib {
         return $this->callerList;
     }
 
-    private function fritzBoxMakeDots($str) {
+    private function makeDots($str) {
         $newStr = "";
         for ($i = 0; $i < strlen($str); $i++) {
             $active = substr($str, $i,1);
