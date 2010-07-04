@@ -117,10 +117,10 @@ class callImportManager{
 	/*
 	 * getAliceCalls
 	 */
-	public function getAliceCalls( $username, $password){
+	/*public function getAliceCalls( $username, $password){
 		$dn = new dusnetRemote($sipAccount, $this->tr);
 		return $this->getBillingProviderCalls($dn, $username, $password, DUSNET_SAVE_CSV_DATA_TO_WORKDIR);
-	}
+	}'/'
 	
 	/*
 	 * getDusNetCalls
