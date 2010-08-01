@@ -53,7 +53,7 @@ class fritzBoxRemote extends curllib {
         );
         preg_match( "/var challenge = \"(.*?)\";/", $response, $match);
         $challenge = $match[1];
-        $secondHalf =  $this->addZeroChars($challenge . "-" .$this->fritzBoxMakeDots($password));
+        $secondHalf =  $this->addZeroChars($challenge . "-" .$this->makeDots($password));
         $challengeString = $challenge . "-" . md5( $secondHalf );
 
         $comment = "logon to fritzbox and get session id";
