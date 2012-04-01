@@ -27,20 +27,20 @@
  */
 
 final class dusnetRemote extends billingProviderPrototype{
-	
+
 	/*
 	 * constructor
 	 */
-	function __construct($sipAccount, $traceObj){	
+	function __construct($sipAccount, $traceObj){
 		parent::__construct("dus.net", "https://my.dus.net/", $traceObj);
 		$this->handleSessionCookies();
-		$this->setCreditRegex('/<tr.*?><td><IMG.*?><\/td><td>.*?<\/td><td>(.*?EUR.*?)<\/td><\/tr>/');
+		$this->setCreditRegex('/<td.*?>(.*?EUR.*?)<\/td>/');
 		$this->describeStandardRequests(
 			array(
 				self::FR_TASK_LOGON => array(
 					self::FR_TYPE     => self::FR_TYPE_POST,
-					self::FR_PATH     => "login.php",
-					self::FR_POSTVARS => "login=[[USER]]&password=[[PASSWORD]]&submit=Login",
+					self::FR_PATH     => "index.php",
+					self::FR_POSTVARS => "login=[[USER]]&password=[[PASSWORD]]&action=Login&language=german",
 				),
 				self::FR_TASK_LOGOUT => array(
 					self::FR_TYPE     => self::FR_TYPE_GET,
@@ -51,50 +51,29 @@ final class dusnetRemote extends billingProviderPrototype{
 					array(
 						self::FR_COMMENT  => "get evn data from last 3 days",
 						self::FR_TYPE     => self::FR_TYPE_POST,
-						self::FR_POSTVARS => "startday=01&startmonth=[[MONTH]]&startyear=[[YEAR]]&endday=31&endmonth=[[MONTH]]&endyear=[[YEAR]]&sip=$sipAccount&submit=aktualisieren",
-						self::FR_PATH     => "voip_access/evn.php"
+						self::FR_POSTVARS => "startday=01&startmonth=[[MONTH]]&startyear=[[YEAR]]&endday=31&endmonth=[[MONTH]]&endyear=[[YEAR]]&sip=0&time1=archiv&csvcustomerid=$sipAccount&action=Auswahl+anfordern",
+						self::FR_PATH     => "xn/listingcenter/accesslist.php"
 					),
 					array(
 						self::FR_COMMENT  => "get evn data from [[YEAR]]-[[MONTH]]-01 to [[YEAR]]-[[MONTH]]-31",
 						self::FR_TYPE     => self::FR_TYPE_POST,
-						self::FR_POSTVARS => "startday=01&startmonth=[[MONTH]]&startyear=[[YEAR]]&endday=31&endmonth=[[MONTH]]&endyear=[[YEAR]]&sip=$sipAccount&archiv=Archiv",
-						self::FR_PATH     => "voip_access/evn.php"
+						self::FR_POSTVARS => "startday=01&startmonth=[[MONTH]]&startyear=[[YEAR]]&endday=31&endmonth=[[MONTH]]&endyear=[[YEAR]]&sip=0&time1=archiv&csvcustomerid=$sipAccount&action=Auswahl+anfordern",
+						self::FR_PATH     => "xn/listingcenter/accesslist.php"
 					)
 				),
 				self::FR_TASK_GETCREDIT => array(
 					self::FR_TYPE     => self::FR_TYPE_GET,
-					self::FR_PATH     => "xp/index.php"
+					self::FR_PATH     => "xn/news.php"
 				)
 			)
-		);		
+		);
 	}
-	
-	/*
-	 * downloads all calls for a given timespan
-	 * and adds them to array $this->callerList
-	 * @sipAccount
-	 * ...
-	 */	
-	public function collectArchiveCalls($sipAccount,$startD,$startM,$startY,$endD,$endM,$endY){
-		$comment = "get evn data from $startY-$startM-$startD to $endY-$endM-$endD";
-		$postvalues = "startday=$startD&startmonth=$startM&startyear=$startY&endday=$endD&endmonth=$endM&endyear=$endY&sip=$sipAccount&archiv=Archiv";
-		$this->collectCalls($sipAccount,$postvalues, $comment);
-	}
-	
-	/*
-	 * last three days always have to be obtained separately
-	 */
-	public function collectLatestCalls($sipAccount){
-		$comment = "get evn data from last 3 days";
-		$postvalues = "sip=$sipAccount&submit=aktualisieren";
-		$this->collectCalls($sipAccount,$postvalues, $comment);
-	}
-	
-	private function collectCalls($sipAccount,$postvalues, $comment){	
+
+	private function collectCalls($sipAccount,$postvalues, $comment){
 		//$sipAccount can also be "alle"
 /*		$this->callerString .= $this->postRequest(
-			$comment, 
-			$postvalues, 
+			$comment,
+			$postvalues,
 			"voip_access/evn.php"
 		);*/
 		$this->callerString .= $this->executeFlexRequest(
@@ -105,26 +84,40 @@ final class dusnetRemote extends billingProviderPrototype{
 				self::FR_PATH     => "voip_access/evn.php"
 			)
 		);
-		
+
 	}
-		
-	private function createCallerListArray(){	
+
+	private function createCallerListArray(){
 		$pattern = "/<tr class=\'(even|odd)'>.*?<\/tr>/s";
 		$pattern_data = "/<td(| align=\"right\")>(.*?)<\/td>/s";
-		
+
 		/*
-		Datum	
-		CLID	
-		Anschluss	
-		Ziel	
-		SIP-User	
-		Dauer	
-		Länge [Dies ist die Basis der Berechnung] 	
-		Kosten in Cent [Abgerechnet laut Tarif] 	
-		Zielnetz
-		
+		alt und obsolet:
+
+		0 Datum
+		1 CLID
+		2 Anschluss
+		3 Ziel
+		4 SIP-User
+		5 Dauer
+		6 Länge [Dies ist die Basis der Berechnung]
+		7 Kosten in Cent [Abgerechnet laut Tarif]
+		8 Zielnetz
+
+		neu 2012:
+
+		0 Datum
+		1 Uhrzeit
+		2 Anschluss "CLIP"
+                3 <leer>
+		4 Ziel
+		5 Länge
+		6 Kosten in Cent
+                  <!-- ct -->
+		7 Zielnetz
+
 		*/
-		
+
 		if (preg_match_all( $pattern, $this->callerString, $hits2) === false){
 			$this->trace .=  "STRANGE: No match in rows - no calls.\n";
 		}
@@ -133,52 +126,52 @@ final class dusnetRemote extends billingProviderPrototype{
 			$hits = array_reverse($hits2[0]);
 			foreach ($hits as $hit){
 				if (preg_match_all  ( $pattern_data, $hit, $data) === false){
-					$this->trace .= "STRANGE: No match in table cells - no calls.\n";
+					$this->tr->addToTrace(3, "STRANGE: No match in table cells - no calls.");
 				}
 				else{
-					if (count($data[2]) != 9){
-						$this->trace .= "ERROR: 9 items are expected!";
-					} 
+					if (count($data[2]) != 8){
+						$this->tr->addToTrace(1, "ERROR: 8 items are expected!");
+					}
 					$data = $data[2];
 					//$this->trace .= print_r($data, true);
-					 
-					$durationarray = explode(":",$data[6]);
+
+					$durationarray = explode(":",$data[5]);
 					if (count($durationarray) == 2){
 						$hours   = 0;
 						$minutes = $durationarray[0];
 						$seconds = $durationarray[1];
-						$durationstring = '00:' . $data[6];
+						$durationstring = '00:' . $data[5];
 					}
 					elseif (count($durationarray) == 3){
 						$hours   = $durationarray[0];
 						$minutes = $durationarray[1];
 						$seconds = $durationarray[2];
-						$durationstring = $data[6];
+						$durationstring = $data[5];
 					}
 					else{
-						//$this->trace .=  "ERROR: Duration format should either be mm:ss or hh:mm:ss.\n";
+						$this->tr->addToTrace(1, "ERROR: Duration format should either be mm:ss or hh:mm:ss.");
 						$hours   = 0;
 						$minutes = 0;
 						$seconds = 0;
 						$durationstring = "?";
 					}
-					
+
+					$date = explode( ".", trim($data[0]));
+
 					$this->callerList[] = array(
-						"Datum" => $data[0],	
-						"Nummer" => $data[3],	
-						"Tarif" => $data[8],
+						"Datum" => $date[2] . "-" . $date[1] . "-" . $date[0] . " " . trim($data[1]),
+						"Nummer" => $data[4],
+						"Tarif" => $data[7],
 						"Dauer" => $durationstring,
 						"DauerInSekunden" => intval($hours) * 3600 + intval($minutes) * 60 + intval($seconds),
 						"Minuten" => intval($hours) * 60 + intval($minutes) + ((intval($seconds) > 0)?1:0) , //manually
-						"Kosten" => strtr(floatval(strtr($data[7],',','.')) / 100, '.',',') . "€"//in cent
+						"Kosten" => strtr(floatval(strtr($data[6],',','.')) / 100, '.',',') . "€"//in cent
 					);
 				}
 			}
-			//$this->trace .= print_r($this->callerList, true);
-			
 		}
 	}
-	
+
 	/*
 	 * returns an multidimensional array containing all collected calls
 	 */
@@ -186,21 +179,21 @@ final class dusnetRemote extends billingProviderPrototype{
 		$this->createCallerListArray();
 		return $this->callerList;
 	}
-	
+
 	/*
 	 * returns all collected calls in form of a csv file
 	 */
 	public function getCsvData(){
 		$csvdata = "";
-		
+
 		foreach ($this->callerList as $calldata){
 			foreach ($calldata as $name=>$element){
 				$csvdata .= $element;
 				if ($name != "Kosten"){ //last element
-					$csvdata .= ";";	
-				}	
+					$csvdata .= ";";
+				}
 				else{
-					$csvdata .= "\n";	
+					$csvdata .= "\n";
 				}
 			}
 		}
@@ -208,6 +201,4 @@ final class dusnetRemote extends billingProviderPrototype{
 	}
 
 }
-
-
 ?>
