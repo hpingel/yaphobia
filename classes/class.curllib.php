@@ -26,27 +26,30 @@
 class curllib {
 
     const
-        FR_TYPE = 'FR_TYPE',
-        FR_TYPE_GET = 'FR_TYPE_GET', 
+       FR_TYPE = 'FR_TYPE',
+        FR_TYPE_GET = 'FR_TYPE_GET',
         FR_TYPE_POST = 'FR_TYPE_POST',
         FR_TYPE_BINARY = 'FR_TYPE_BINARY',
-        
+
         FR_PATH = 'FR_PATH',
-        FR_POSTVARS = 'FR_POSTVARS', 
+        FR_POSTVARS = 'FR_POSTVARS',
         FR_CHECKS = 'FR_CHECKS',
-        FR_COMMENT = 'FR_COMMENT', 
-        FR_IGNORE = 'FR_IGNORE'; 
-    
+        FR_COLLECT = 'FR_COLLECT',
+        FR_ADDCOLLECTED2POST = 'FR_ADDCOLLECTED2POST',
+        FR_COMMENT = 'FR_COMMENT',
+        FR_IGNORE = 'FR_IGNORE';
+
     protected
-        $cookieJarEnabled = false,
+       $cookieJarEnabled = false,
         $baseurl = "",
         $requestType = "",
         $postValues = "",
         $cookieJarPath = "",
         $cookieJarInitialized = false,
         $binaryTransfer = false,
-        $tr;
-        
+        $tr,
+        $collection;
+
     function __construct ($tr){
         $this->cookieJarEnabled = false;
         $this->baseurl = "";
@@ -56,13 +59,14 @@ class curllib {
         $this->cookieJarInitialized = false;
         $this->binaryTransfer = false;
         $this->tr = $tr;
-        
+        $this->collection = array();
+
         //FIXME: use get_loaded_extensions instead to check if curl is enabled
         if (!function_exists( "curl_init")){
             $this->tr->addToTrace(0, "Please enable the PHP Extension curl in php.ini file.");
         }
     }
-    
+
     function __destruct (){
         if ( $this->cookieJarEnabled ){
             $this->deleteCookieJarFile();
@@ -79,7 +83,7 @@ class curllib {
             @unlink($this->cookieJarPath);
         }
     }
-    
+
     public function enableBinaryTransfer (){
         $this->binaryTransfer = true;
     }
@@ -87,7 +91,7 @@ class curllib {
     public function disableBinaryTransfer (){
         $this->binaryTransfer = false;
     }
-    
+
     public function setBaseUrl ( $url ){
         $this->baseurl = $url;
     }
@@ -106,7 +110,7 @@ class curllib {
         if (is_array( $request)){
             if ( !array_key_exists( self::FR_TYPE, $request) && isset($request[0]) && is_array( $request[0] )) {
                 $this->tr->addToTrace(4, "detected multiple requests: ". count($request) . " (Comment: " . $comment . ")");
-                
+
                 foreach ($request as $single_request){
                     //replace placeholders with variables to make comment more specific
                     if ( array_key_exists( self::FR_COMMENT, $single_request))
@@ -126,6 +130,12 @@ class curllib {
                 else{
                     $this->tr->addToTrace(4, "replace operation was skipped");
                 }
+                if ( array_key_exists( self::FR_ADDCOLLECTED2POST, $request)){
+                    foreach ($request[self::FR_ADDCOLLECTED2POST] as $key ){
+                        $search = "[[COLLECTION:". $key ."]]";
+                        $request[ self::FR_POSTVARS ] = str_replace($search, $this->collection[ $key ], $request[ self::FR_POSTVARS ] );
+                    }
+                }
                 $response .= $this->executeSingleFlexRequest( $comment, $request);
             }
         }
@@ -133,9 +143,9 @@ class curllib {
             $this->tr->addToTrace(1, "ERROR: A flex request should always be of type array: '".$request."'");
         }
         return $response;
-    }    
-    
-    
+    }
+
+
     protected function executeSingleFlexRequest( $comment, $request){
         $this->tr->addToTrace(4, print_r($request, true));
         switch ($request[ self::FR_TYPE ]) {
@@ -149,30 +159,44 @@ class curllib {
             $response = $this->binaryTransfer ($comment, $request[ self::FR_PATH ]);
             break;
         }
+        if (array_key_exists( self::FR_COLLECT, $request) && is_array( $request[ self::FR_COLLECT ])) {
+            $this->tr->addToTrace(3, "FR_COLLECT: trying to collect values from response");
+            foreach ( $request[ self::FR_COLLECT ] as $collect_key => $collect_regex ){
+                preg_match( $collect_regex, $response, $match); //FIXME use return value???
+                if (count($match) >= 2){
+                    $this->collection[ $collect_key ]= urlencode( $match[1] );
+                    $this->tr->addToTrace(3, "collect value determination for $collect_key seems to be successful: $match[1]");
+                }
+                else{
+                    $this->tr->addToTrace(3, "collect value determination for $collect_key didn't work, count is: " . count($match));
+                    $this->collection[ $collect_key ]= "ERROR";
+                }
+            }
+        }
         if (array_key_exists( self::FR_IGNORE, $request) && $request[ self::FR_IGNORE ] == true){
             $response = "";
             $this->tr->addToTrace(3, "Content of this request will not be added to resultset.");
-        } 
+        }
         return $response;
     }
-    
+
     public function postRequest ($comment, $postfields, $urlSuffix){
         $this->setRequestType( "post" );
         $this->setPostVars( $postfields );
         $response = $this->curlRequest( $comment, $urlSuffix );
         $this->setPostVars ( "" );
         $this->setRequestType( "" );
-        return $response; 
+        return $response;
     }
 
     public function getRequest ($comment, $urlSuffix){
         $this->setPostVars ( "" );
         $this->setRequestType( "get" );
         $response = $this->curlRequest( $comment, $urlSuffix );
-        return $response; 
+        return $response;
     }
-    
-    
+
+
     public function binaryTransfer ( $comment, $urlSuffix){
         $this->setRequestType( "get" );
         $this->enableBinaryTransfer();
@@ -180,12 +204,12 @@ class curllib {
         $this->disableBinaryTransfer();
         return $response;
     }
-    
+
     private function curlRequest ($comment, $urlSuffix ){
         $this->tr->addToTrace(4, "---------------------------------------------------");
         $this->tr->addToTrace(3, "REQUEST: $comment");
         $this->tr->addToTrace(4, "---------------------------------------------------");
-        $ch = curl_init();        
+        $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $this->baseurl . $urlSuffix);
         $this->tr->addToTrace(4, "URL: (" . $this->requestType . ") ". $this->baseurl . $urlSuffix );
         curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (X11; U; Linux x86_64; de; rv:1.9.1.9) Gecko/20100402 Ubuntu/9.10 (karmic) Firefox/3.5.9");
@@ -199,17 +223,17 @@ class curllib {
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1 ); //don't print response directly
         curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-        //curl_setopt($ch, CURLOPT_USERPWD, '[username]:[password]'); not needed        
+        //curl_setopt($ch, CURLOPT_USERPWD, '[username]:[password]'); not needed
         if ($this->binaryTransfer === true){
             $this->tr->addToTrace(4, "Binary transfer is turned on.");
             curl_setopt($ch, CURLOPT_BINARYTRANSFER, 1);
         }
         if ($this->requestType == "post"){
-            //curl_setopt($ch, CURLOPT_POST, TRUE);        
+            //curl_setopt($ch, CURLOPT_POST, TRUE);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $this->postValues);
             $this->tr->addToTrace(4, "Postvars: " . $this->postValues );
         }
-        
+
         if ( $this->cookieJarEnabled ){
             curl_setopt($ch, CURLOPT_COOKIEJAR, $this->cookieJarPath );
             if (!$this->cookieJarInitialized){
@@ -226,25 +250,26 @@ class curllib {
                 }
                 else{
                     $this->tr->addToTrace(4,"Existing cookie jar is used.");
-                    
+
                 }
                 curl_setopt($ch, CURLOPT_COOKIEJAR, $this->cookieJarPath );
                 curl_setopt($ch, CURLOPT_COOKIEFILE, $this->cookieJarPath );
             }
-            
+
         }
         $response = curl_exec($ch);
-        
+
         $this->tr->addToTrace(5, print_r(curl_getinfo ( $ch ), true) );
 
         if ( curl_errno($ch) != 0) {
             $this->tr->addToTrace(1, "cURL error: number:" . curl_errno($ch) . " , message: " . curl_error($ch));
-        }        
-        
+        }
+
         curl_close($ch);
 
         //$this->tr->addToTrace(5,'CookieJarContents='.file_get_contents($this->cookieJarPath));
-        
+        $this->tr->addToTrace(5,$response);
+
         return $response;
     }
 
@@ -258,9 +283,9 @@ class curllib {
         }
         else{
             return "ERROR: File '$filename' could not be created.\n";
-            
+
         }
-    }    
+    }
 }
 
 ?>

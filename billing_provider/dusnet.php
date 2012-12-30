@@ -32,39 +32,65 @@ final class dusnetRemote extends billingProviderPrototype{
 	 * constructor
 	 */
 	function __construct($sipAccount, $traceObj){
-		parent::__construct("dus.net", "https://my.dus.net/", $traceObj);
+		parent::__construct("dus.net", "https://www.dus.net/de/", $traceObj);
 		$this->handleSessionCookies();
 		$this->setCreditRegex('/<td.*?>(.*?EUR.*?)<\/td>/');
 		$this->describeStandardRequests(
 			array(
-				self::FR_TASK_LOGON => array(
-					self::FR_TYPE     => self::FR_TYPE_POST,
-					self::FR_PATH     => "index.php",
-					self::FR_POSTVARS => "login=[[USER]]&password=[[PASSWORD]]&action=Login&language=german",
-				),
-				self::FR_TASK_LOGOUT => array(
-					self::FR_TYPE     => self::FR_TYPE_GET,
-					self::FR_PATH     => "logout.php"
-				),
-				self::FR_TASK_GETEVNOFMONTH => array(
-					//FIXME: in case the month selected is not the current month, it makes no sense to get the last three days!
-					array(
-						self::FR_COMMENT  => "get evn data from last 3 days",
-						self::FR_TYPE     => self::FR_TYPE_POST,
-						self::FR_POSTVARS => "startday=01&startmonth=[[MONTH]]&startyear=[[YEAR]]&endday=31&endmonth=[[MONTH]]&endyear=[[YEAR]]&sip=0&time1=archiv&csvcustomerid=$sipAccount&action=Auswahl+anfordern",
-						self::FR_PATH     => "xn/listingcenter/accesslist.php"
-					),
-					array(
-						self::FR_COMMENT  => "get evn data from [[YEAR]]-[[MONTH]]-01 to [[YEAR]]-[[MONTH]]-31",
-						self::FR_TYPE     => self::FR_TYPE_POST,
-						self::FR_POSTVARS => "startday=01&startmonth=[[MONTH]]&startyear=[[YEAR]]&endday=31&endmonth=[[MONTH]]&endyear=[[YEAR]]&sip=0&time1=archiv&csvcustomerid=$sipAccount&action=Auswahl+anfordern",
-						self::FR_PATH     => "xn/listingcenter/accesslist.php"
-					)
-				),
-				self::FR_TASK_GETCREDIT => array(
-					self::FR_TYPE     => self::FR_TYPE_GET,
-					self::FR_PATH     => "xn/news.php"
-				)
+                self::FR_TASK_LOGON => array(
+                    array(
+                        self::FR_TYPE     => self::FR_TYPE_GET,
+                        self::FR_PATH     => "",
+                        self::FR_COLLECT  => array(
+                            "return" => '/<input type="hidden" name="return" value="(.*?)" \/>/',
+                            "hash" => '/<input type="hidden" name="(.*?)" value="1" \/>/'
+                        ),
+                        self::FR_IGNORE   => true
+                    ),
+                    array(
+                        self::FR_TYPE     => self::FR_TYPE_POST,
+                        self::FR_PATH     => "",
+                        self::FR_POSTVARS => "username=[[USER]]&password=[[PASSWORD]]&option=com_users&task=user.login&return=[[COLLECTION:return]]&[[COLLECTION:hash]]=1",
+                        self::FR_COLLECT  => array(
+                            "return" => '/<input type="hidden" name="return" value="(.*?)" \/>/',
+                            "hash" => '/<input type="hidden" name="(.*?)" value="1" \/>/'
+                        ),
+                        self::FR_ADDCOLLECTED2POST => array( "return","hash")
+                    )
+                ),
+                self::FR_TASK_LOGOUT => array(
+                        self::FR_TYPE     => self::FR_TYPE_POST,
+                        self::FR_PATH     => "kundenmenue/kundencenter",
+                        self::FR_POSTVARS => "task=user.logout&option=com_users&return=[[COLLECTION:return]]&[[COLLECTION:hash]]=1",
+                        self::FR_ADDCOLLECTED2POST => array( "return","hash")
+                ),
+                self::FR_TASK_GETEVNOFMONTH => array(
+                        //FIXME: in case the month selected is not the current month, it makes no sense to get the last three days!
+                        array(
+                                self::FR_COMMENT  => "get evn data from last 3 days",
+                                self::FR_TYPE     => self::FR_TYPE_POST,
+                                self::FR_POSTVARS => "sip=0&time1=dreitage&csvcustomerid=$sipAccount&action=Auswahl+anfordern",
+                                self::FR_PATH     => "kundenmenue/kundencenter/accesslist.php?time1=dreitage",
+                                self::FR_COLLECT  => array(
+                                    "return" => '/<input type="hidden" name="return" value="(.*?)" \/>/',
+                                    "hash" => '/<input type="hidden" name="(.*?)" value="1" \/>/'
+                                ),
+                        ),
+                        array(
+                                self::FR_COMMENT  => "get evn data from [[YEAR]]-[[MONTH]]-01 to [[YEAR]]-[[MONTH]]-31",
+                                self::FR_TYPE     => self::FR_TYPE_POST,
+                                self::FR_POSTVARS => "time1=archiv&startday=01&startmonth=[[MONTH]]&startyear=[[YEAR]]&endday=31&endmonth=[[MONTH]]&endyear=[[YEAR]]&sip=0&action=Auswahl+anfordern&csvcustomerid=$sipAccount",
+                                self::FR_PATH     => "kundenmenue/kundencenter/accesslist.php?time1=archiv",
+                                self::FR_COLLECT  => array(
+                                    "return" => '/<input type="hidden" name="return" value="(.*?)" \/>/',
+                                    "hash" => '/<input type="hidden" name="(.*?)" value="1" \/>/'
+                                ),
+                        )
+                ),
+                self::FR_TASK_GETCREDIT => array(
+                        self::FR_TYPE     => self::FR_TYPE_GET,
+                        self::FR_PATH     => "kundenmenue/kundencenter/index.html"
+                )
 			)
 		);
 	}
@@ -165,7 +191,7 @@ final class dusnetRemote extends billingProviderPrototype{
 						"Dauer" => $durationstring,
 						"DauerInSekunden" => intval($hours) * 3600 + intval($minutes) * 60 + intval($seconds),
 						"Minuten" => intval($hours) * 60 + intval($minutes) + ((intval($seconds) > 0)?1:0) , //manually
-						"Kosten" => strtr(floatval(strtr($data[6],',','.')) / 100, '.',',') . "€"//in cent
+						"Kosten" => strtr(floatval(strtr($data[6],',','.')) / 100, '.',',') . "EUR"//in cent
 					);
 				}
 			}
